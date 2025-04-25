@@ -3,30 +3,25 @@
 
 	let { children } = $props();
 
-	import { Navigation, AppBar, Popover, FileUpload } from '@skeletonlabs/skeleton-svelte';
-	import Icon from '@iconify/svelte';
+	import { AppBar, FileUpload, Navigation } from '@skeletonlabs/skeleton-svelte';
 	// Icons
-	import AppBarC from '$lib/components/AppBarC.svelte';
+	import { page } from '$app/state';
 	import {
 		ArrowLeft,
 		Bolt,
-		BookHeart,
 		CircleDashed,
-		Columns2,
+		File,
 		Home,
+		ImagePlus,
 		LayoutGrid,
 		Plus,
-		Settings2,
 		StretchHorizontal,
 		X,
-		ImagePlus,
-		File,
-		XCircle
+		XCircle,
+		Link
 	} from 'lucide-svelte';
-	import { page } from '$app/state';
 	import { fade, fly, slide } from 'svelte/transition';
-	import { home } from '../lib/shared.svelte';
-	import { FileUp } from '@lucide/svelte';
+	import { home, localItems, sharedItem } from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
 	let openPopup = $state(false);
@@ -34,6 +29,20 @@
 		console.log('Navigation value:', home.pageTitle);
 		console.log(home.homeLayout);
 	});
+
+	function generatePreview(event: any) {
+		const reader = new FileReader();
+		reader.onload = (event) => {
+			const image = event.target?.result;
+
+			sharedItem.img = image;
+			console.log(image);
+
+			// set the image as the src of an image element
+		};
+		reader.readAsDataURL(event.acceptedFiles[0]);
+		// console.log(reader)
+	}
 </script>
 
 <div in:slide class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
@@ -109,8 +118,8 @@
 					openPopup = false;
 				}}
 			>
-				Cancel</button
-			>
+				Cancel
+			</button>
 		</div>
 	{/if}
 </div>
@@ -189,8 +198,8 @@
 {/snippet}
 
 {#snippet PopUpCard()}
-	<div
-		class="card bg-surface-900/90 right-0 bottom-0 left-0 w-95 space-y-4 p-4 backdrop-blur-xl"
+	<form
+		class="card bg-surface-900/90 right-0 bottom-0 left-0 w-90 space-y-3 p-3 backdrop-blur-xl"
 		transition:fly={{ y: 100, duration: 300 }}
 	>
 		<header class="flex justify-between">
@@ -203,28 +212,58 @@
 			>
 		</header>
 		<div class="input-group grid-cols-auto">
-			<input class="ig-input bg-primary-500/20" type="text" placeholder="Title" />
+			<input
+				form="input[]"
+				class="ig-input bg-primary-500/20"
+				bind:value={sharedItem.title}
+				type="text"
+				required
+				placeholder="Title"
+			/>
 		</div>
-		<div>
+		<!-- <div>
 			{#each imageFile as file}
 				<img alt="uploaded" class="h-12 w-12" src={'/' + file.name} />
 			{/each}
-		</div>
+		</div> -->
 		{@render Fileupload()}
-		<div class="input-group grid-cols-[auto_1fr]">
-			<div class="ig-cell preset-tonal w-fit">
-				<Icon icon="lucide:link" class="h-4 w-4" />
-			</div>
-			<input class="ig-input" type="text" placeholder="www.example.com" />
+		<div class="input-group bg-primary-500/20 grid-cols-[auto_1fr]">
+			<div class="ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
+			<input
+				class="ig-input"
+				bind:value={sharedItem.link}
+				type="url"
+				placeholder="www.example.com"
+			/>
 		</div>
+
+		<textarea
+			class="textarea input-group bg-primary-500/20 ig-input"
+			rows="3"
+			placeholder="Detail."
+			bind:value={sharedItem.text}
+		></textarea>
 
 		<article>
-			<button type="button" class="btn preset-filled w-full p-3">Add Item</button>
+			<button
+				type="button"
+				class="btn preset-filled w-full p-3"
+				onclick={() => {
+					if (
+						sharedItem.title === '' ||
+						(sharedItem.text === '' && sharedItem.img === '' && sharedItem.link === '')
+					) {
+						console.log('Important Fields Empty');
+					} else {
+						localItems.current.push(sharedItem);
+					}
+				}}>Add Item</button
+			>
 		</article>
-	</div>
+	</form>
 {/snippet}
 
-{#snippet PopUp()}
+<!-- {#snippet PopUp()}
 	<Popover
 		classes=" "
 		open={openPopup}
@@ -242,7 +281,7 @@
 				<button
 					class="btn-icon hover:preset-tonal"
 					onclick={() => {
-						openPopup = !openPopup;
+						openPopup = !openPopup
 					}}><X /></button
 				>
 			</header>
@@ -262,27 +301,23 @@
 			</article>
 		{/snippet}
 	</Popover>
-{/snippet}
+{/snippet} -->
 
 {#snippet Fileupload()}
 	<div class="">
 		<FileUpload
-			name="example"
+			name="image"
 			accept="image/*"
 			maxFiles={2}
-			subtext="Attach up to 2 Images."
-			onFileChange={(files) => {
-				console.log('Files accepted:', '/', files.acceptedFiles.at(0)?.name);
-				imageFile = files.acceptedFiles.at(0)?.stream;
-			}}
+			subtext=""
+			onFileChange={generatePreview}
 			onFileReject={console.error}
-			classes=" w-full"
+			classes=" w-full bg-primary-500/20 rounded-lg"
+			label=""
 		>
 			{#snippet iconInterface()}
-				{#if imageFile !== undefined}
-					{#each imageFile as file}
-						<img alt="uploaded" class="h-12 w-12" src={'/' + file.name} />
-					{/each}
+				{#if sharedItem.img !== ''}
+					<img alt="uploaded" class="h-30" src={sharedItem.img} />
 				{:else}
 					<ImagePlus class="h-12 w-12" />
 				{/if}
@@ -290,7 +325,12 @@
 
 			{#snippet iconFile()}
 				<File class="size-4" />{/snippet}
-			{#snippet iconFileRemove()}<XCircle class="size-4" />{/snippet}
+			{#snippet iconFileRemove()}<XCircle
+					onclick={() => {
+						sharedItem.img = '';
+					}}
+					class="size-4"
+				/>{/snippet}
 		</FileUpload>
 	</div>
 {/snippet}

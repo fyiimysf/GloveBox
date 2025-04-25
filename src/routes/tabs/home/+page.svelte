@@ -2,7 +2,7 @@
 	import { draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
 	import { bounceIn, cubicIn, elasticInOut, linear, sineOut } from 'svelte/easing';
-	import { home } from '../../../lib/shared.svelte';
+	import { home, localItems } from '../../../lib/shared.svelte';
 	import { ChevronRight } from 'lucide-svelte';
 	// import Card from '../card[id]/Cards.svelte';
 
@@ -10,6 +10,7 @@
 	$effect(() => {});
 </script>
 
+<!-- Saved Section -->
 <div in:fly={{ delay: 0, x: -100 }} class="relative grid space-y-3">
 	<a href="/tabs/home/saved">
 		<div class="flex items-stretch justify-between">
@@ -23,7 +24,7 @@
 	{#if home.homeLayout}
 		<!-- 1 card column -->
 		<div in:fly={{ y: 70 }} class="grid grid-cols-1 gap-2">
-			{#each Array(4) as _}
+			<!-- {#each Array(4) as _}
 				{@render Card(
 					'https://picsum.photos/200',
 					'Card Title',
@@ -33,22 +34,13 @@
 					new Date().toLocaleDateString(),
 					home.homeLayout
 				)}
-			{/each}
+			{/each} -->
+			{@render ListLocal()}
 		</div>
 	{:else}
 		<!-- 2 cards column -->
 		<div in:fly={{ y: -20 }} class="grid grid-cols-2 gap-2">
-			{#each Array(4) as _}
-				{@render Card(
-					'https://picsum.photos/200',
-					'Card Title',
-					'Card Subtitle',
-					'Card Description ',
-					'Card Footer Left',
-					new Date().toLocaleDateString(),
-					home.homeLayout
-				)}
-			{/each}
+			{@render ListLocal()}
 		</div>
 	{/if}
 </div>
@@ -63,7 +55,7 @@
 	full?: boolean
 )}
 	<a
-		href="/card/"
+		href="/"
 		class="card-link card bg-surface-900 border-surface-200-800 card-hover divide-surface-200-800 block divide-y overflow-hidden border-[2px]"
 	>
 		{#if full}
@@ -103,4 +95,18 @@
 			</div>
 		{/if}
 	</a>
+{/snippet}
+
+{#snippet ListLocal()}
+	{#each localItems.current as item}
+		{@render Card(
+			item.img,
+			'',
+			item.title,
+			item.description,
+			item.link,
+			new Date().toLocaleDateString(),
+			home.homeLayout
+		)}
+	{/each}
 {/snippet}

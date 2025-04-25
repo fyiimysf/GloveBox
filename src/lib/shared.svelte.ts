@@ -8,4 +8,11 @@ export const home = $state({
 	pageTitle: 'Home'
 });
 
-export const files = new LocalStorage('files', { value: [] });
+export const sharedItem: { title: string; img: any; link: string; text: string } = $state({
+	title: '',
+	img: '',
+	link: '',
+	text: '',
+	date: ''
+});
+export const localItems = new LocalStorage('localItems', []);

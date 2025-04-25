@@ -22,7 +22,7 @@
 </script>
 
 <a
-	href="/card/"
+	href="/"
 	class="card-link card bg-surface-900 border-surface-200-800 card-hover divide-surface-200-800 block overflow-hidden border-[2px]"
 >
 	{#if full}

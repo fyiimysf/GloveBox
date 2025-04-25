@@ -2,7 +2,7 @@
 	import { MoreHorizontal } from 'lucide-svelte';
 </script>
 
-<a href="/card">
+<a href="/">
 	<div id="webcrumbs">
 		<div
 			class="shadow-3xl w-[100%] transform overflow-hidden rounded-xl shadow-2xl transition-transform duration-300 hover:-translate-y-2"
