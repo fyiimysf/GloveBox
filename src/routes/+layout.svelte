@@ -43,6 +43,33 @@
 		reader.readAsDataURL(event.acceptedFiles[0]);
 		// console.log(reader)
 	}
+
+	import { fetchOgData } from '$lib/actions/fetchOgData';
+	import type { OpenGraphData } from '$lib/types';
+
+	let url = $state('');
+	let loading = $state(false);
+	let error: string | null = $state(null);
+	let ogData: OpenGraphData | null = $state(null);
+	import noImageUrl from '$lib/assets/no-image.png';
+	async function handleSubmit() {
+		if (!url) {
+			error = 'Please enter a URL';
+			return;
+		}
+
+		loading = true;
+		error = null;
+		ogData = null;
+
+		try {
+			ogData = await fetchOgData(url);
+		} catch (e) {
+			error = e instanceof Error ? e.message : 'An error occurred';
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <div in:slide class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
@@ -90,6 +117,7 @@
 							class="btn-icon preset-tonal-primary z-20 size-8 rounded-full px-8"
 							onclick={() => {
 								openPopup = true;
+								url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = '';
 							}}
 						>
 							<Plus />
@@ -109,7 +137,7 @@
 	</div>
 	<!-- PopUp -->
 	{#if page.route.id !== '/settings' && openPopup}
-		<div class="fixed inset-0 z-200 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+		<div class="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm">
 			{@render PopUpCard()}
 			<button
 				class="btn preset-tonal fixed bottom-5 w-90 py-2"
@@ -199,7 +227,8 @@
 
 {#snippet PopUpCard()}
 	<form
-		class="card bg-surface-900/90 right-0 bottom-0 left-0 w-90 space-y-3 p-3 backdrop-blur-xl"
+		onsubmit={handleSubmit}
+		class="card bg-surface-900/90 right-0 bottom-0 left-0 z-200 m-4 w-full space-y-3 p-3 backdrop-blur-xl"
 		transition:fly={{ y: 100, duration: 300 }}
 	>
 		<header class="flex justify-between">
@@ -226,36 +255,52 @@
 				<img alt="uploaded" class="h-12 w-12" src={'/' + file.name} />
 			{/each}
 		</div> -->
-		{@render Fileupload()}
-		<div class="input-group bg-primary-500/20 grid-cols-[auto_1fr]">
-			<div class="ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
-			<input
-				class="ig-input"
-				bind:value={sharedItem.link}
-				type="url"
-				placeholder="www.example.com"
-			/>
-		</div>
-
 		<textarea
 			class="textarea input-group bg-primary-500/20 ig-input"
 			rows="3"
 			placeholder="Detail."
 			bind:value={sharedItem.text}
 		></textarea>
+		{@render Fileupload()}
+
+		<span class="flex justify-center">OR</span>
+
+		<div class="input-group bg-primary-500/20 grid-cols-[auto_1fr]">
+			<div class="ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
+			<input
+				class="ig-input"
+				bind:value={url}
+				oninput={handleSubmit}
+				type="url"
+				placeholder="www.example.com"
+			/>
+		</div>
 
 		<article>
 			<button
-				type="button"
+				type="submit"
 				class="btn preset-filled w-full p-3"
 				onclick={() => {
-					if (
-						sharedItem.title === '' ||
-						(sharedItem.text === '' && sharedItem.img === '' && sharedItem.link === '')
-					) {
-						console.log('Important Fields Empty');
-					} else {
+					console.log(url);
+					if (url !== '' && ogData) {
+						if (ogData.image === '') {
+							sharedItem.img = noImageUrl;
+						} else {
+							sharedItem.img = ogData.image;
+						}
+						sharedItem.title = ogData.title;
+						sharedItem.link = ogData.description;
+						sharedItem.text = ogData.siteName;
 						localItems.current.push(sharedItem);
+						openPopup = false;
+					} else if (sharedItem.title !== '' && sharedItem.text !== '') {
+						if (sharedItem.img === '') {
+							sharedItem.img = noImageUrl;
+						}
+						localItems.current.push(sharedItem);
+						openPopup = false;
+					} else {
+						console.log('Important Fields Empty');
 					}
 				}}>Add Item</button
 			>
