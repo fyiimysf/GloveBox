@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import toast from 'svelte-french-toast';
+	import NoImageUrl from '$lib/assets/no-image.png';
 	// import { Pageprops } from './$types';
 
 	let {
@@ -19,16 +22,24 @@
 		full?: boolean;
 	} = $props();
 	let date = new Date().toLocaleDateString();
+	const imgError = (e: any) => (e.target.src = NoImageUrl);
 </script>
 
 <a
-	href="/"
-	class="card-link card bg-surface-900 border-surface-200-800 card-hover divide-surface-200-800 block overflow-hidden border-[2px]"
+	href={page.route.id}
+	onclick={() => {
+		toast('Page yet to be made', {
+			icon: '🚧',
+			style: 'border-radius: 200px; background: #333; color: #fff;',
+			duration: 1000
+		});
+	}}
+	class="card-link card card-hover divide-surface-200-800 block overflow-hidden"
 >
 	{#if full}
-		<div class="divide-primary-500/60 divide-y-2">
+		<div class="divide-primary-500/60 bg-surface-900 divide-y-2">
 			<header>
-				<img src={img} class="aspect-video w-full" alt="card-preview" />
+				<img src={img} onerror={imgError} class="aspect-video w-full" alt="card-preview" />
 			</header>
 			<article class=" px-3 py-1">
 				<div>
@@ -42,15 +53,13 @@
 			</footer>
 		</div>
 	{:else}
-		<div
-			class=" card border-surface-200-800 card-hover block h-30 w-full overflow-hidden rounded-xl border-[0.5px] shadow-lg"
-		>
-			<img src={img} class="h-full w-full" alt="card-preview" />
+		<div class="card card-hover h-25 overflow-hidden rounded-xl border-2 shadow-lg">
+			<img src={img} onerror={imgError} class=" aspect-video h-full w-full" alt="card-preview" />
 
-			<article class="relative bottom-13 p-1">
+			<article class="relative bottom-8 p-1">
 				<span class="-space-y-2">
-					<p class="p">{h1}</p>
-					<small class="opacity-60">{fL}</small>
+					<p class="p truncate px-1 invert-45">{h1}</p>
+					<!-- <small class="w-fit truncate rounded-lg bg-black/20 px-1 opacity-60">{fL}</small> -->
 				</span>
 
 				<!-- <small class="text-justify opacity-60">{p}</small> -->

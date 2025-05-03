@@ -4,6 +4,7 @@
 	let { children } = $props();
 
 	import { AppBar, FileUpload, Navigation } from '@skeletonlabs/skeleton-svelte';
+	import toast, { Toaster } from 'svelte-french-toast';
 	// Icons
 	import { page } from '$app/state';
 	import {
@@ -21,13 +22,22 @@
 		Link
 	} from 'lucide-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
-	import { home, localItems, sharedItem } from '../lib/shared.svelte';
+	import { home, localItems, sharedItem, space, localSpaces } from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
 	let openPopup = $state(false);
+	onMount(() => {
+		if (page.route.id === '/tabs/home') {
+			home.pageTitle = 'Home';
+			goto('/tabs/home');
+		} else if (page.route.id === '/tabs/space') {
+			home.pageTitle = 'Space';
+			goto('/tabs/space');
+		}
+	});
 	$effect(() => {
-		console.log('Navigation value:', home.pageTitle);
-		console.log(home.homeLayout);
+		// console.log('Navigation value:', home.pageTitle);
+		// console.log(home.homeLayout);
 	});
 
 	function generatePreview(event: any) {
@@ -44,6 +54,7 @@
 		// console.log(reader)
 	}
 
+	// OpenGraph imports and functions
 	import { fetchOgData } from '$lib/actions/fetchOgData';
 	import type { OpenGraphData } from '$lib/types';
 
@@ -70,6 +81,30 @@
 			loading = false;
 		}
 	}
+
+	// Image to Base64 imports and Functions
+	import imageToBase64 from 'image-to-base64';
+	import { browser } from '$app/environment';
+	import Placeholder from '$lib/components/Placeholder.svelte';
+	import ColorGroup from '$lib/components/ColorGroup.svelte';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
+	function img2base64(url: string) {
+		console.log(imageToBase64(url));
+	}
+
+	//Chips
+	let chipsSelect = $state(false);
+	let chipName = $state('');
+	function addItemToSpace(item: any) {
+		localSpaces.current.forEach((spc: any) => {
+			console.log(spc.name);
+			if (spc.name === chipName) {
+				console.log(spc);
+				spc.items.push(item);
+			}
+		});
+	}
 </script>
 
 <div in:slide class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
@@ -80,8 +115,13 @@
 	</header>
 	<!-- Main -->
 	<main class="dark:bg-surface-950 relative w-full p-3">
-		{@render children()}
+		{#if !browser}
+			<Placeholder />
+		{:else}
+			{@render children()}
+		{/if}
 	</main>
+	<Toaster />
 	<!-- PopUp -->
 	<!-- <div>
 		{#if page.route.id !== '/settings' && openPopup}
@@ -89,61 +129,59 @@
 		{/if}
 	</div> -->
 	<!-- Footer -->
-	<div
-		in:slide={{ delay: 0, axis: 'y' }}
-		class="border-primary-200 sticky bottom-0 z-10 grid grid-rows-[1fr_auto]"
-	>
+	<div class="border-primary-200 sticky bottom-0 z-11 grid grid-rows-[1fr_auto]">
 		<!-- Component -->
 		{#if page.route.id === '/tabs/home' || page.route.id === '/tabs/space'}
-			<div>
-				<Navigation.Bar
-					classes="bg-surface-950/70 backdrop-blur"
-					value={home.pageTitle}
-					onValueChange={(newValue) => {
-						home.pageTitle = newValue;
-					}}
+			<Navigation.Bar
+				classes="bg-surface-950/70 backdrop-blur"
+				value={home.pageTitle}
+				onValueChange={(newValue) => {
+					home.pageTitle = newValue;
+				}}
+			>
+				<Navigation.Tile
+					active=" border-1 border-primary-200 bg-primary-900/50 "
+					rounded="rounded-3xl rounded-b-lg rounded-l-lg"
+					href="/tabs/home/"
+					id="Home"
+					label="Home"><Home /></Navigation.Tile
 				>
-					<Navigation.Tile
-						active=" border-1 border-primary-200 bg-primary-900/50 "
-						rounded="rounded-3xl rounded-b-lg rounded-l-lg"
-						href="/tabs/home/"
-						id="Home"
-						label="Home"><Home /></Navigation.Tile
-					>
 
-					<div class="flex items-center justify-center px-2">
-						<button
-							type="button"
-							class="btn-icon preset-tonal-primary z-20 size-8 rounded-full px-8"
-							onclick={() => {
-								openPopup = true;
-								url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = '';
-							}}
-						>
-							<Plus />
-						</button>
-					</div>
-
-					<Navigation.Tile
-						active="border-1  border-primary-200 bg-primary-900/50 "
-						rounded="rounded-3xl rounded-b-lg rounded-r-lg"
-						href="/tabs/space/"
-						id="Space"
-						label="Space"><CircleDashed /></Navigation.Tile
+				<div class="flex items-center justify-center px-2">
+					<button
+						type="button"
+						class="btn-icon preset-tonal-primary z-20 size-8 rounded-full px-8"
+						onclick={() => {
+							openPopup = true;
+							url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = '';
+						}}
 					>
-				</Navigation.Bar>
-			</div>
+						<Plus />
+					</button>
+				</div>
+
+				<Navigation.Tile
+					active="border-1  border-primary-200 bg-primary-900/50 "
+					rounded="rounded-3xl rounded-b-lg rounded-r-lg"
+					href="/tabs/space/"
+					id="Space"
+					label="Space"><CircleDashed /></Navigation.Tile
+				>
+			</Navigation.Bar>
 		{/if}
 	</div>
 	<!-- PopUp -->
 	{#if page.route.id !== '/settings' && openPopup}
-		<div class="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+		<div
+			class="fixed inset-0 z-100 flex items-center justify-center bg-black/40 p-2 backdrop-blur-sm"
+		>
 			{@render PopUpCard()}
 			<button
-				class="btn preset-tonal fixed bottom-5 w-90 py-2"
+				class="btn preset-tonal fixed bottom-5 w-80 py-2"
 				aria-label="title"
 				onclick={() => {
 					openPopup = false;
+					space.clr = 'purple';
 				}}
 			>
 				Cancel
@@ -226,86 +264,194 @@
 {/snippet}
 
 {#snippet PopUpCard()}
-	<form
-		onsubmit={handleSubmit}
-		class="card bg-surface-900/90 right-0 bottom-0 left-0 z-200 m-4 w-full space-y-3 p-3 backdrop-blur-xl"
-		transition:fly={{ y: 100, duration: 300 }}
+	<!-- Home Page PopUp Card -->
+	<div
+		transition:fly={{ y: 100, duration: 200 }}
+		class="card bg-surface-900/90 right-0 bottom-0 left-0 z-200 m-4 w-full p-3 backdrop-blur-xl"
 	>
-		<header class="flex justify-between">
-			<p class="text-xl font-bold">Add Item</p>
-			<button
-				class="btn-icon preset-filled hover:preset-tonal rounded-full"
-				onclick={() => {
-					openPopup = !openPopup;
-				}}><X /></button
-			>
-		</header>
-		<div class="input-group grid-cols-auto">
-			<input
-				form="input[]"
-				class="ig-input bg-primary-500/20"
-				bind:value={sharedItem.title}
-				type="text"
-				required
-				placeholder="Title"
-			/>
-		</div>
-		<!-- <div>
-			{#each imageFile as file}
-				<img alt="uploaded" class="h-12 w-12" src={'/' + file.name} />
-			{/each}
-		</div> -->
-		<textarea
-			class="textarea input-group bg-primary-500/20 ig-input"
-			rows="3"
-			placeholder="Detail."
-			bind:value={sharedItem.text}
-		></textarea>
-		{@render Fileupload()}
+		{#if page.route.id === '/tabs/home'}
+			<form onsubmit={handleSubmit} class="space-y-3">
+				<header class="flex justify-between">
+					<p class="text-xl font-bold">Add Item</p>
+					<button
+						class="btn-icon badge preset-filled hover:preset-tonal rounded-full"
+						onclick={() => {
+							openPopup = !openPopup;
+						}}><X /></button
+					>
+				</header>
+				<hr class="hr" />
+				<div class="input-group grid-cols-auto">
+					<input
+						form="input[]"
+						class="ig-input bg-primary-500/20"
+						bind:value={sharedItem.title}
+						type="text"
+						required
+						placeholder="Title"
+					/>
+				</div>
 
-		<span class="flex justify-center">OR</span>
+				<textarea
+					class="input-group bg-primary-500/20 ig-input w-full"
+					rows="3"
+					placeholder="Description."
+					bind:value={sharedItem.text}
+				></textarea>
+				{@render Fileupload()}
 
-		<div class="input-group bg-primary-500/20 grid-cols-[auto_1fr]">
-			<div class="ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
-			<input
-				class="ig-input"
-				bind:value={url}
-				oninput={handleSubmit}
-				type="url"
-				placeholder="www.example.com"
-			/>
-		</div>
+				<span class="flex justify-center">OR</span>
 
-		<article>
-			<button
-				type="submit"
-				class="btn preset-filled w-full p-3"
-				onclick={() => {
-					console.log(url);
-					if (url !== '' && ogData) {
-						if (ogData.image === '') {
-							sharedItem.img = noImageUrl;
-						} else {
-							sharedItem.img = ogData.image;
-						}
-						sharedItem.title = ogData.title;
-						sharedItem.link = ogData.description;
-						sharedItem.text = ogData.siteName;
-						localItems.current.push(sharedItem);
-						openPopup = false;
-					} else if (sharedItem.title !== '' && sharedItem.text !== '') {
-						if (sharedItem.img === '') {
-							sharedItem.img = noImageUrl;
-						}
-						localItems.current.push(sharedItem);
-						openPopup = false;
-					} else {
-						console.log('Important Fields Empty');
-					}
-				}}>Add Item</button
-			>
-		</article>
-	</form>
+				<div class="input-group bg-primary-500/20 grid-cols-[auto_1fr]">
+					<div class="ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
+					<input
+						class="ig-input"
+						bind:value={url}
+						oninput={handleSubmit}
+						type="url"
+						placeholder="www.example.com"
+					/>
+				</div>
+				<hr class="hr" />
+				{#if localSpaces.current.length > 0}
+					<p class="text-sm">Assign a Space</p>
+					<div class="flex gap-3">
+						{#each localSpaces.current as obj}
+							{#if obj.name === chipName}
+								<button
+									onclick={() => {
+										chipName = '';
+									}}
+									type="button"
+									class="chip bg-{obj.clr}-400 rounded-full">{obj.name}</button
+								>
+							{:else}
+								<button
+									onclick={() => {
+										chipName = obj.name;
+									}}
+									type="button"
+									class="chip preset-outlined rounded-full">{obj.name}</button
+								>
+							{/if}
+						{/each}
+						<button
+							onclick={() => {
+								goto('/tabs/space');
+								// space.clr = 'purple';
+								// space.name = space.desc = '';
+								home.pageTitle = 'Space';
+							}}
+							type="button"
+							class="text-primary-300 text-xl">+</button
+						>
+					</div>
+				{/if}
+				<article>
+					<button
+						type="submit"
+						class="btn preset-filled w-full p-3"
+						onclick={() => {
+							console.log(url);
+							if (url !== '' && ogData) {
+								if (ogData.image === '') {
+									sharedItem.img = noImageUrl;
+								} else {
+									// console.log(imageToBase64(ogData.image))
+									sharedItem.img = ogData.image;
+								}
+								sharedItem.title = ogData.title;
+								sharedItem.text = ogData.description;
+								sharedItem.link = ogData.siteName;
+								sharedItem.url = url;
+								localItems.current.push(sharedItem);
+								addItemToSpace(sharedItem);
+								openPopup = false;
+							} else if (sharedItem.title !== '' && sharedItem.text !== '') {
+								if (sharedItem.img === '') {
+									sharedItem.img = noImageUrl;
+								}
+								localItems.current.push(sharedItem);
+								addItemToSpace(sharedItem);
+								openPopup = false;
+								toast.success('Item Added', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+								url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = '';
+							} else {
+								console.log('Important Fields Empty');
+								toast.error('Important fields are missing', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							}
+						}}>Add Item</button
+					>
+				</article>
+			</form>
+		{:else if page.route.id === '/tabs/space'}
+			<!-- Space page PopUp Card -->
+			<form class="space-y-3">
+				<header class="flex justify-between">
+					<p class="text-xl font-bold">Add Space</p>
+					<button
+						class="btn-icon badge preset-filled hover:preset-tonal rounded-full"
+						onclick={() => {
+							openPopup = !openPopup;
+							space.clr = 'purple';
+							space.name = space.desc = '';
+						}}><X /></button
+					>
+				</header>
+				<hr class="hr" />
+				<div class="input-group grid-cols-auto">
+					<input
+						form="input[]"
+						class="ig-input bg-primary-500/20"
+						bind:value={space.name}
+						type="text"
+						required
+						placeholder="Name"
+					/>
+				</div>
+				<textarea
+					class="input-group bg-primary-500/20 ig-input w-full"
+					rows="3"
+					placeholder="Detail."
+					bind:value={space.desc}
+				></textarea>
+
+				<p class="text-sm font-light">Select Space colour</p>
+				<ColorGroup />
+				<article>
+					<button
+						type="submit"
+						class="btn preset-filled w-full bg-{space.clr}-400 p-3"
+						onclick={() => {
+							if (space.name !== '') {
+								console.log('space added: ' + space.name);
+								localSpaces.current.push(space);
+								openPopup = !openPopup;
+								toast.success('Space "' + space.name + '" Created', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+								space.clr = 'purple';
+								space.name = space.desc = '';
+							} else {
+								console.log('Important Fields Empty in Spaces');
+								toast.error('Name is Missing', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							}
+						}}>Add Space</button
+					>
+				</article>
+			</form>
+		{/if}
+	</div>
 {/snippet}
 
 <!-- {#snippet PopUp()}

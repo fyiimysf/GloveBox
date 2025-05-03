@@ -3,9 +3,10 @@
 	import type { PageData } from '../$types';
 	import { Accordion, Switch } from '@skeletonlabs/skeleton-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
-	import { localItems } from '$lib/shared.svelte';
+	import { localItems, localSpaces } from '$lib/shared.svelte';
 	import { redirect } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
+	import toast from 'svelte-french-toast';
 
 	let { data }: { data: PageData } = $props();
 	let disturb = $state(false);
@@ -13,6 +14,10 @@
 	let disabled = $state(false);
 	let formatDialogue = $state(false);
 	let value = $state(['1']);
+	function DeleteEverything() {
+		localItems.current = [];
+		localSpaces.current = [];
+	}
 	const lorem =
 		'Lorem ipsum dolor, sit amet consectetur adipisicing elit. Sit esse nisi eligendi fuga! Quas nisi repellat adipisci animi repellendus incidunt laborum sunt qui nesciunt, ducimus saepe sapiente sed ut labore. Lorem ipsum dolor, sit amet consectetur adipisicing elit. Sit esse nisi eligendi fuga! Quas nisi repellat adipisci animi repellendus incidunt laborum sunt qui nesciunt, ducimus saepe sapiente sed ut labore.';
 </script>
@@ -116,9 +121,13 @@
 			<div class="flex w-full items-center justify-around gap-4">
 				<button
 					onclick={() => {
-						localItems.current = [];
+						DeleteEverything();
 						formatDialogue = false;
 						goto('/tabs/home');
+						toast('Everything Wiped!', {
+							icon: '⚠️',
+							style: 'border-radius: 200px; background: #333; color: #fff;'
+						});
 					}}
 					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 text-lg font-bold text-red-400"
 					>Yes</button

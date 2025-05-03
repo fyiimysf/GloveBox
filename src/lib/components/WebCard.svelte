@@ -7,7 +7,7 @@
 		class="group bg-primary-900-100 w-40 rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl"
 	>
 		<div class="relative overflow-hidden rounded-t-xl">
-			<img
+			<enhanced:img
 				src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f"
 				alt="Content"
 				class="h-[200px] w-full transform object-cover transition-transform duration-300 group-hover:scale-110"
@@ -21,7 +21,7 @@
 				</p>
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-2">
-						<img
+						<enhanced:img
 							src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e"
 							alt="Author"
 							class="h-8 w-8 rounded-full object-cover"
