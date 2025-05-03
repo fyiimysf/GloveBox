@@ -83,15 +83,11 @@
 	}
 
 	// Image to Base64 imports and Functions
-	import imageToBase64 from 'image-to-base64';
 	import { browser } from '$app/environment';
 	import Placeholder from '$lib/components/Placeholder.svelte';
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	function img2base64(url: string) {
-		console.log(imageToBase64(url));
-	}
 
 	//Chips
 	let chipsSelect = $state(false);

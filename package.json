@@ -47,7 +47,6 @@
 		"@sveu/browser": "^1.0.1",
 		"@types/cors": "^2.8.17",
 		"@types/express": "^5.0.1",
-		"@types/image-to-base64": "^2.1.2",
 		"lucide-svelte": "^0.482.0",
 		"node-html-parser": "^7.0.1",
 		"svelte-french-toast": "^1.2.0"

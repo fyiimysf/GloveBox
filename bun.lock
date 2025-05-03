@@ -10,7 +10,6 @@
         "@sveu/browser": "^1.0.1",
         "@types/cors": "^2.8.17",
         "@types/express": "^5.0.1",
-        "@types/image-to-base64": "^2.1.2",
         "lucide-svelte": "^0.482.0",
         "node-html-parser": "^7.0.1",
         "svelte-french-toast": "^1.2.0",
@@ -307,7 +306,6 @@
 
     "@types/http-errors": ["@types/http-errors@2.0.4", "", {}, "sha512-D0CFMMtydbJAegzOyHjtiKPLlvnm3iTZyZRSZoLq2mRhDdmLfIWOCYPfQJ4cu2erKghU++QvjcUjp/5h7hESpA=="],
 
-    "@types/image-to-base64": ["@types/image-to-base64@2.1.2", "", {}, "sha512-SD9M2pVsB5N67IbeTS9VBy6ojoXnj1Nh1VwigkYKtUbjAVEiFHjWygb2Y8NlMQM889APRqekZIRpSdYkmQ9rsQ=="],
 
     "@types/mime": ["@types/mime@1.3.5", "", {}, "sha512-/pyBZWSLD2n0dcHE3hq8s8ZvcETHtEuF+3E7XVt0Ig2nvsVQXdghHVcEkIWjy9A0wKfTn97a/PSDYohKIlnP/w=="],
 
