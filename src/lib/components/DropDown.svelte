@@ -1,11 +1,16 @@
 <script lang="ts">
+	import { localItems } from '$lib/shared.svelte';
 	import { CircleDashed, CircleDot } from '@lucide/svelte';
-	import { Delete, Link, MoreVertical, Trash } from 'lucide-svelte';
-	import { draw, fade } from 'svelte/transition';
+	import { Link, MoreVertical, Trash } from 'lucide-svelte';
+	import { fade } from 'svelte/transition';
 
 	let dropMenu = $state(false);
 
 	let { data, id = 0 }: { data?: any; id?: number } = $props();
+
+	function DeleteFromStorage() {
+		localItems.current.slice(data, 1);
+	}
 </script>
 
 <!-- svelte-ignore a11y_consider_explicit_label -->
@@ -51,7 +56,13 @@
 			</span>
 		</div>
 	</div>
-	<div class="py-1">
+	<div
+		onclick={() => {
+			let tempArr = localItems.current.filter((item: any) => item.title !== data.title);
+			localItems.current = tempArr;
+		}}
+		class="py-1"
+	>
 		<div class="block px-4 py-1 text-xs text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
 			<span class="flex justify-between">
 				Delete

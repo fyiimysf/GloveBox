@@ -4,7 +4,7 @@
 	import { bounceIn, cubicIn, elasticInOut, linear, sineOut } from 'svelte/easing';
 	import { home, localItems } from '../../../lib/shared.svelte';
 	import { ArrowDown, ChevronRight, CircleAlert } from 'lucide-svelte';
-	import { MoreHorizontalIcon, MoreVerticalIcon } from '@lucide/svelte';
+	import { Link, Link2, MoreHorizontalIcon, MoreVerticalIcon } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import toast from 'svelte-french-toast';
 	import DropDown from '$lib/components/DropDown.svelte';
@@ -117,11 +117,20 @@
 			</div>
 		{:else}
 			<div
-				class=" card border-surface-200-800/0 card-hover block h-fit w-full rounded-xl border-[0.5px]"
+				class=" card border-surface-200-800/0 card-hover relative block h-fit w-full rounded-xl border-[0.5px]"
 			>
 				<div class="absolute">
 					<DropDown data={item} />
 				</div>
+				<!-- svelte-ignore node_invalid_placement_ssr -->
+				{#if item.url !== ''}
+					<a
+						href={item.url}
+						target="_blank"
+						class="  text-primary-400 absolute right-2 mt-2 rounded-full backdrop-blur-lg"
+						><Link class=" size-4" /></a
+					>
+				{/if}
 				{#if img}
 					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -142,17 +151,7 @@
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<p
 							onclick={() => {
-								if (item.url === '') {
-									toastMessage();
-								} else {
-									try {
-										window.open(item.url);
-									} catch (err) {
-										if (err) {
-											window.location.href = item.url;
-										}
-									}
-								}
+								toastMessage();
 							}}
 							class="text-md truncate pb-1 font-mono font-bold"
 						>

@@ -14,7 +14,7 @@
 			in:fly={{ y: 70 }}
 			class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-6 p-2"
 		>
-			{#each localItems.current as _}
+			{#each [...localItems.current].reverse() as _}
 				<Cards
 					img={_.img}
 					h6={_.title}

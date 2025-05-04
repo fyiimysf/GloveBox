@@ -117,6 +117,7 @@
 			{@render children()}
 		{/if}
 	</main>
+
 	<Toaster />
 	<!-- PopUp -->
 	<!-- <div>
@@ -148,8 +149,14 @@
 						type="button"
 						class="btn-icon preset-tonal-primary z-20 size-8 rounded-full px-8"
 						onclick={() => {
+							url =
+								sharedItem.img =
+								sharedItem.link =
+								sharedItem.text =
+								sharedItem.title =
+								sharedItem.url =
+									'';
 							openPopup = true;
-							url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = '';
 						}}
 					>
 						<Plus />
@@ -363,6 +370,13 @@
 								localItems.current.push(sharedItem);
 								addItemToSpace(sharedItem);
 								openPopup = false;
+								url =
+									sharedItem.img =
+									sharedItem.link =
+									sharedItem.text =
+									sharedItem.title =
+									sharedItem.url =
+										'';
 							} else if (sharedItem.title !== '' && sharedItem.text !== '') {
 								if (sharedItem.img === '') {
 									sharedItem.img = noImageUrl;
@@ -374,7 +388,13 @@
 									style: 'border-radius: 200px; background: #333; color: #fff;',
 									duration: 1500
 								});
-								url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = '';
+								url =
+									sharedItem.img =
+									sharedItem.link =
+									sharedItem.text =
+									sharedItem.title =
+									sharedItem.url =
+										'';
 							} else {
 								console.log('Important Fields Empty');
 								toast.error('Important fields are missing', {
