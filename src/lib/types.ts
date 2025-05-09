@@ -13,3 +13,10 @@ export interface SharedItem {
 	text: string;
 	date: string;
 }
+
+export interface Space {
+	name: string;
+	clr: string;
+	desc: string;
+	items: [];
+}

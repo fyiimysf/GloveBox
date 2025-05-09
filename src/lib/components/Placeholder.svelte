@@ -1,7 +1,9 @@
 <script>
+	import { blur } from "svelte/transition";
+
 </script>
 
-<main>
+<main transition:blur|global>
 	<div class="w-full space-y-4">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center justify-center space-x-4">

@@ -24,13 +24,61 @@
 	],
 	"screenshots": [
 		{
-			"src": "screenshots/homePage.png",
-			"sizes": "1170x2532",
+			"src": "screenshots/Start.png",
+			"sizes": "828x1792",
 			"type": "image/png",
 			"form_factor": "narrow",
-			"label": "Wonder Widgets"
+			"label": "Start Page"
+		},
+		{
+			"src": "screenshots/Home.png",
+			"sizes": "828x1792",
+			"type": "image/png",
+			"form_factor": "narrow",
+			"label": "Home Page"
+		},
+		{
+			"src": "screenshots/Space.png",
+			"sizes": "828x1792",
+			"type": "image/png",
+			"form_factor": "narrow",
+			"label": "Space Page"
+		},{
+			"src": "screenshots/desktop/start.png",
+			"sizes": "2104x1794",
+			"type": "image/png",
+			"form_factor": "wide",
+			"label": "Start Desktop"
+		},{
+			"src": "screenshots/desktop/home.png",
+			"sizes": "2104x1794",
+			"type": "image/png",
+			"form_factor": "wide",
+			"label": "Home Desktop"
+		},{
+			"src": "screenshots/desktop/space.png",
+			"sizes": "2104x1794",
+			"type": "image/png",
+			"form_factor": "wide",
+			"label": "Space Desktop"
+		}
+	],"shortcuts": [
+		{
+			"name": "Open Home Page",
+			"short_name": "Home",
+			"description": "Home page of the app",
+			"url": "/tabs/home",
+			"icons": [{ "src": "/icons/web/icon-192.png", "sizes": "192x192" }]
+		},
+		{
+			"name": "Open Saved Pages",
+			"short_name": "Saved page",
+			"description": "Saved pages of the app",
+			"url": "/tab/home/saved",
+			"icons": [{ "src": "/icons/web/icon-192.png", "sizes": "192x192" }]
 		}
 	],
+	
 	"background_color": "#8367D6",
 	"display": "standalone",
 	"scope": "/",

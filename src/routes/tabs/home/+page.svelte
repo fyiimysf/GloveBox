@@ -2,7 +2,7 @@
 	import { blur, draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
 	import { bounceIn, cubicIn, elasticInOut, linear, sineOut } from 'svelte/easing';
-	import { home, localItems } from '../../../lib/shared.svelte';
+	import { cardPage, home, localItems } from '../../../lib/shared.svelte';
 	import { ArrowDown, ChevronRight, CircleAlert } from 'lucide-svelte';
 	import { Link, Link2, MoreHorizontalIcon, MoreVerticalIcon } from '@lucide/svelte';
 	import { page } from '$app/state';
@@ -11,6 +11,7 @@
 	import NoImageUrl from '$lib/assets/no-image.png';
 	import Placeholder from '$lib/components/Placeholder.svelte';
 	// import Card from '../card[id]/Cards.svelte';
+	import { Image } from '@unpic/svelte';
 
 	let { data } = $props();
 	function toastMessage() {
@@ -22,6 +23,21 @@
 	}
 	let dropMenu = $state(false);
 	const imgError = (e: any) => (e.target.src = NoImageUrl);
+	function CardPage(
+		title: string,
+		img: any,
+		link: string,
+		text: string,
+		date: string,
+		url: string
+	) {
+		cardPage.title = title;
+		cardPage.img = img;
+		cardPage.link = link;
+		cardPage.text = text;
+		cardPage.date = date;
+		cardPage.url = url;
+	}
 </script>
 
 <!-- Saved Section -->
@@ -80,23 +96,31 @@
 	id?: number,
 	item?: any
 )}
-	<a
-		href={page.route.id}
-		class="card-link bg-primary-900/30 card border-surface-200-800 card-hover divide-surface-200-800 block divide-y border-[2px] shadow-lg"
+	<div
+		class="card-link bg-primary-900/30 card border-surface-200-800 card-hover divide-surface-200-800 z-5 block divide-y border-[2px] shadow-lg"
 	>
 		{#if full}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="">
-				<div class="absolute items-center p-2">
+				<div class="absolute z-6 items-center p-2">
 					<DropDown data={item} />
 				</div>
-				<div onclick={toastMessage}>
+				{#if item.url !== ''}
+					<!-- svelte-ignore node_invalid_placement_ssr -->
+					<a
+						href={item.url}
+						target="_blank"
+						class="  text-primary-100 absolute right-3 mt-2 rounded-full bg-black/5 backdrop-blur-lg"
+						><Link class="size-7 p-1" /></a
+					>
+				{/if}
+				<a onclick={toastMessage} href="/card">
 					<header>
-						<img
+						<Image
 							src={img}
 							onerror={imgError}
-							class=" aspect-video w-full rounded-t-xl"
+							class=" aspect-video w-full rounded-t-xl object-cover"
 							alt={NoImageUrl}
 						/>
 					</header>
@@ -113,7 +137,7 @@
 						<small class="text-justify opacity-60">{fL}</small>
 						<small class="opacity-60">On {fR}</small>
 					</footer>
-				</div>
+				</a>
 			</div>
 		{:else}
 			<div
@@ -127,63 +151,70 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="  text-primary-400 absolute right-2 mt-2 rounded-full backdrop-blur-lg"
-						><Link class=" size-4" /></a
+						class="  text-primary-100 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
+						><Link class=" size-6 p-1" /></a
 					>
 				{/if}
-				{#if img}
-					<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<img
-						src={img}
-						class="aspect-video w-full rounded-t-lg"
-						onerror={imgError}
-						alt="card-preview"
-						onclick={() => {
-							toastMessage();
-						}}
-					/>
-				{/if}
-
-				<article class=" h-full items-stretch justify-between pl-1 shadow-none">
-					<span class="text-surface-50 flex flex-col justify-center -space-y-1">
+				<a
+					onclick={() => CardPage(item.title, item.img, item.link, item.text, item.date, item.url)}
+					href="/card"
+				>
+					{#if img}
 						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<p
+						<Image
+							src={img}
+							class="aspect-video w-full rounded-t-lg object-cover"
+							onerror={imgError}
+							alt="card-preview"
 							onclick={() => {
 								toastMessage();
 							}}
-							class="text-md truncate pb-1 font-mono font-bold"
-						>
-							{h1}
-						</p>
-						<small class="truncate font-mono text-xs">{fL}</small>
-					</span>
+						/>
+					{/if}
 
-					<!-- <small class="text-justify opacity-60">{p}</small> -->
-				</article>
+					<article class=" h-full items-stretch justify-between pl-1 shadow-none">
+						<span class="text-surface-50 flex flex-col justify-center -space-y-1">
+							<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+							<!-- svelte-ignore a11y_click_events_have_key_events -->
+							<p
+								onclick={() => {
+									toastMessage();
+								}}
+								class="text-md truncate pb-1 font-mono font-bold"
+							>
+								{h1}
+							</p>
+							<small class="truncate font-mono text-xs">{fL}</small>
+						</span>
 
+						<!-- <small class="text-justify opacity-60">{p}</small> -->
+					</article>
+				</a>
 				<!-- <footer class="flex items-center justify-between gap-4 p-4">
     <small class="opacity-60">On {fR}</small>
     </footer> -->
 			</div>
 		{/if}
-	</a>
+	</div>
 {/snippet}
 
 {#snippet ListLocal()}
 	{#each [...localItems.current].reverse() as item, index}
-		{@render Card(
-			item.img,
-			'',
-			item.title,
-			item.text,
-			item.link,
-			new Date().toLocaleDateString(),
-			home.homeLayout,
-			index,
-			item
-		)}
+	{#if index < 8}
+		
+	{@render Card(
+		item.img,
+		'',
+		item.title,
+		item.text,
+		item.link,
+		new Date().toLocaleDateString(),
+		home.homeLayout,
+		index,
+		item
+	)}
+	{/if}
 	{/each}
 {/snippet}
 

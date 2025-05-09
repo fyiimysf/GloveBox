@@ -8,12 +8,9 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<div class=" grid space-y-6">
+<div class=" mb-10 grid space-y-6">
 	<div in:scale>
-		<div
-			in:fly={{ y: 70 }}
-			class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-6 p-2"
-		>
+		<div in:fly={{ y: 70 }} class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
 			{#each [...localItems.current].reverse() as _}
 				<Cards
 					img={_.img}
@@ -23,6 +20,7 @@
 					fL={_.link}
 					fR={_.date}
 					full={!home.savedLayout}
+					item={_}
 				/>
 			{/each}
 		</div>

@@ -5,6 +5,8 @@
 
 	import { AppBar, FileUpload, Navigation } from '@skeletonlabs/skeleton-svelte';
 	import toast, { Toaster } from 'svelte-french-toast';
+	import BlobImg from '$lib/assets/blob-scene.svg';
+	import appIcon from '$lib/assets/icon-512.png';
 	// Icons
 	import { page } from '$app/state';
 	import {
@@ -19,10 +21,22 @@
 		StretchHorizontal,
 		X,
 		XCircle,
-		Link
+		Link,
+		Info,
+		MoreVertical,
+		Trash,
+		CircleMinus
 	} from 'lucide-svelte';
-	import { fade, fly, slide } from 'svelte/transition';
-	import { home, localItems, sharedItem, space, localSpaces } from '../lib/shared.svelte';
+	import { blur, fade, fly, slide } from 'svelte/transition';
+	import {
+		home,
+		localItems,
+		sharedItem,
+		space,
+		localSpaces,
+		cardPage,
+		first
+	} from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
 	let openPopup = $state(false);
@@ -84,7 +98,6 @@
 
 	// Image to Base64 imports and Functions
 	import { browser } from '$app/environment';
-	import Placeholder from '$lib/components/Placeholder.svelte';
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
@@ -101,20 +114,65 @@
 			}
 		});
 	}
+
+	//DropDown
+	let dropMenu = $state(false);
 </script>
 
-<div in:slide class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
+<div class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
 	<!-- Header -->
-	<header class="sticky top-0 z-10 backdrop-blur-xl">
+	<header in:slide class="sticky top-0 z-10 backdrop-blur-xl">
 		<!-- <AppBarC title={value} {homeLayout}></AppBarC> -->
-		{@render Appbar(home.pageTitle, null)}
+		{#if !page.error && !first.current}
+			{@render Appbar(home.pageTitle, null)}
+		{/if}
 	</header>
 	<!-- Main -->
-	<main class="dark:bg-surface-950 relative w-full p-3">
+	<main in:blur class="relative w-full p-3">
 		{#if !browser}
-			<Placeholder />
+			<div
+				class="fixed top-[40%] right-0 bottom-[40%] left-0 flex h-fit w-full flex-col items-center justify-center"
+			>
+				<CircleDashed class="text-primary-800 size-30 animate-spin" />
+				<CircleMinus class=" text-primary-800 fixed size-15 animate-ping" />
+			</div>
+			<!-- <Placeholder /> -->
 		{:else}
 			{@render children()}
+			{#if first.current && localItems.current.length < 1 && localSpaces.current.length < 1}
+				<!-- svelte-ignore a11y_missing_attribute -->
+				<div class="{first.current ? 'visible' : 'hidden'} ">
+					<img
+						in:blur
+						out:blur={{ delay: 400 }}
+						src={BlobImg}
+						class="fixed inset-1 z-50 flex h-fit w-full justify-center blur-xs"
+					/>
+					<div>
+						<span
+							class="absolute top-0 right-0 bottom-0 left-0 z-51 flex flex-col items-center justify-center gap-2"
+						>
+							<img
+								transition:blur={{ delay: 200 }}
+								src={appIcon}
+								alt="GloveBox"
+								class="shadow-primary-200/50 size-25 rounded-4xl"
+							/>
+							<h2 transition:blur={{ delay: 300 }} class="h3">Welcome to</h2>
+							<h2 transition:blur={{ delay: 300 }} class="h2">GloveBox</h2>
+							<button
+								transition:blur={{ delay: 400 }}
+								type="button"
+								aria-label="title"
+								class="btn preset-filled mt-5 w-60 rounded-full py-2 text-lg"
+								onclick={() => {
+									first.current = !first.current;
+								}}>Continue</button
+							>
+						</span>
+					</div>
+				</div>
+			{/if}
 		{/if}
 	</main>
 
@@ -126,9 +184,12 @@
 		{/if}
 	</div> -->
 	<!-- Footer -->
-	<div class="border-primary-200 sticky bottom-0 z-11 grid grid-rows-[1fr_auto]">
-		<!-- Component -->
-		{#if page.route.id === '/tabs/home' || page.route.id === '/tabs/space'}
+	<!-- Component -->
+	{#if (page.route.id === '/tabs/home' || page.route.id === '/tabs/space') && !first.current}
+		<div
+			transition:slide|global
+			class="border-primary-200 sticky bottom-0 z-11 grid grid-rows-[1fr_auto]"
+		>
 			<Navigation.Bar
 				classes="bg-surface-950/70 backdrop-blur"
 				value={home.pageTitle}
@@ -138,7 +199,7 @@
 			>
 				<Navigation.Tile
 					active=" border-1 border-primary-200 bg-primary-900/50 "
-					rounded="rounded-3xl rounded-b-lg rounded-l-lg"
+					rounded="rounded-3xl rounded-l-lg rounded-b-lg"
 					href="/tabs/home/"
 					id="Home"
 					label="Home"><Home /></Navigation.Tile
@@ -147,7 +208,7 @@
 				<div class="flex items-center justify-center px-2">
 					<button
 						type="button"
-						class="btn-icon preset-tonal-primary z-20 size-8 rounded-full px-8"
+						class="btn-icon preset-tonal-primary z-20 size-8 rounded-2xl px-8"
 						onclick={() => {
 							url =
 								sharedItem.img =
@@ -164,15 +225,15 @@
 				</div>
 
 				<Navigation.Tile
-					active="border-1  border-primary-200 bg-primary-900/50 "
+					active="border-1 border-primary-200 bg-primary-900/50 "
 					rounded="rounded-3xl rounded-b-lg rounded-r-lg"
 					href="/tabs/space/"
 					id="Space"
 					label="Space"><CircleDashed /></Navigation.Tile
 				>
 			</Navigation.Bar>
-		{/if}
-	</div>
+		</div>
+	{/if}
 	<!-- PopUp -->
 	{#if page.route.id !== '/settings' && openPopup}
 		<div
@@ -194,76 +255,115 @@
 </div>
 
 {#snippet Appbar(title: string, children: any)}
-	<AppBar classes="dark:bg-primary-950/80">
-		{#snippet headline()}
-			{#if page.route.id === '/settings'}
-				<center>
-					<h1 in:fade class="h1 font-bold">Settings</h1>
-				</center>
-			{:else if page.route.id === '/tabs/home/saved'}
-				<center>
-					<h1 in:fade class="h1 font-bold">Saved</h1>
-				</center>
-			{:else}
-				<center>
-					<h1 in:fade class="h1 font-bold">{title}</h1>
-				</center>
-			{/if}
-		{/snippet}
+	<div transition:slide|global>
+		<AppBar classes="dark:bg-primary-950/80">
+			{#snippet headline()}
+				{#if page.route.id === '/settings'}
+					<center>
+						<h1 in:fade class="h1 font-bold">Settings</h1>
+					</center>
+				{:else if page.route.id === '/tabs/home/saved'}
+					<center>
+						<h1 in:fade class="h1 font-bold">Saved</h1>
+					</center>
+				{:else if page.route.id === '/tabs/home'}
+					<center>
+						<h1 in:fade class="h1 font-bold">Home</h1>
+					</center>
+				{:else if page.route.id === '/tabs/space'}
+					<center>
+						<h1 in:fade class="h1 font-bold">Space</h1>
+					</center>
+				{:else if page.route.id === '/info'}
+					<center>
+						<h1 in:fade class="h1 font-bold">About</h1>
+					</center>
+				{:else if page.route.id === '/card'}
+					<center>
+						<h1 in:fade class="h1 font-bold">{cardPage.link}</h1>
+					</center>
+				{/if}
+			{/snippet}
 
-		{#snippet lead()}
-			{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved'}
-				<ArrowLeft
-					onclick={() => {
-						history.back();
-					}}
-					class="h-6 w-6"
-				/>
-			{:else if home.homeLayout}
-				<StretchHorizontal
-					onclick={() => {
-						home.homeLayout = !home.homeLayout;
-					}}
-					class="h-6 w-6"
-				/>
-			{:else}
-				<LayoutGrid
-					onclick={() => {
-						home.homeLayout = !home.homeLayout;
-					}}
-					class="h-6 w-6"
-				/>
-			{/if}
-		{/snippet}
-
-		{#snippet trail()}
-			{#if children}
-				{@render children()}
-			{/if}
-			{#if page.route.id !== '/settings'}
-				<a href="/settings">
-					<Bolt class="h-6 w-6" />
-				</a>
-			{/if}
-			{#if page.route.id === '/tabs/home/saved'}
-				{#if home.savedLayout}
+			{#snippet lead()}
+				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/card' || page.route.id === '/info'}
+					<ArrowLeft
+						onclick={() => {
+							history.back();
+						}}
+						class="size-7"
+					/>
+				{:else if home.homeLayout}
 					<StretchHorizontal
 						onclick={() => {
-							home.savedLayout = !home.savedLayout;
+							home.homeLayout = !home.homeLayout;
 						}}
-						class="h-6 w-6"
+						class="size-7"
 					/>
 				{:else}
 					<LayoutGrid
 						onclick={() => {
-							home.savedLayout = !home.savedLayout;
+							home.homeLayout = !home.homeLayout;
 						}}
-						class="h-6 w-6"
+						class="size-7"
 					/>
 				{/if}
-			{/if}
-		{/snippet}
-	</AppBar>
+			{/snippet}
+
+			{#snippet trail()}
+				{#if children}
+					{@render children()}
+				{/if}
+				{#if page.route.id === '/tabs/home' || page.route.id === '/tabs/space'}
+					<a href="/settings">
+						<Bolt class="size-7" />
+					</a>
+				{:else if page.route.id === '/settings'}
+					<a href="/info">
+						<Info class="size-7" />
+					</a>
+				{:else if page.route.id === '/card'}
+					<button
+						onclick={() => {
+							dropMenu = !dropMenu;
+						}}
+					>
+						{#if dropMenu}
+							<div in:fly>
+								<X class="size-7" />
+							</div>
+						{:else}
+							<div in:fly>
+								<MoreVertical class="size-7" />
+							</div>
+						{/if}
+					</button>
+				{/if}
+				{#if page.route.id === '/tabs/home/saved'}
+					{#if home.savedLayout}
+						<StretchHorizontal
+							onclick={() => {
+								home.savedLayout = !home.savedLayout;
+							}}
+							class="size-7"
+						/>
+					{:else}
+						<LayoutGrid
+							onclick={() => {
+								home.savedLayout = !home.savedLayout;
+							}}
+							class="size-7"
+						/>
+					{/if}
+				{/if}
+			{/snippet}
+		</AppBar>
+		{#if dropMenu}
+			<div class="fixed top-15 right-4 z-12 flex justify-end">
+				{@render CardDropDown()}
+			</div>
+		{/if}
+	</div>
 {/snippet}
 
 {#snippet PopUpCard()}
@@ -540,4 +640,63 @@
 				/>{/snippet}
 		</FileUpload>
 	</div>
+{/snippet}
+
+{#if dropMenu}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		onclick={() => {
+			dropMenu = !dropMenu;
+		}}
+		class="fixed inset-0 z-9 bg-black/30 backdrop-blur-xs"
+	></div>
+{/if}
+{#snippet CardDropDown()}
+	{#if dropMenu}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			transition:slide={{ duration: 150 }}
+			id="dropdownDots"
+			onclick={() => {
+				dropMenu = !dropMenu;
+			}}
+			class="bg-primary-950/70 w-50 divide-y divide-white rounded-lg font-bold shadow-sm outline backdrop-blur-lg"
+		>
+			{#if cardPage.url !== ''}
+				<a target="_blank" href={cardPage.url} class="py-1">
+					<div class="block px-4 py-1 text-yellow-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+						<span class="flex justify-between">
+							Open Link
+							<Link />
+						</span>
+					</div>
+				</a>
+			{/if}
+			<div class="py-1">
+				<div class="block px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+					<span class="flex justify-between">
+						Add To Space
+						<CircleDashed />
+					</span>
+				</div>
+			</div>
+			<div
+				onclick={() => {
+					let tempArr = localItems.current.filter((item: any) => item.title !== cardPage.title);
+					localItems.current = tempArr;
+					history.back();
+				}}
+				class="py-1"
+			>
+				<div class="block px-4 py-1 text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
+					<span class="flex justify-between">
+						Delete
+						<Trash />
+					</span>
+				</div>
+			</div>
+		</div>
+	{/if}
 {/snippet}
