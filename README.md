@@ -6,7 +6,7 @@
 GloveBox is built with **SvelteKit** for a reactive, fast interface, and **Tailwind CSS** for clean, modern styling. It also includes a **custom OpenGraph API** for automatic metadata fetching. Best of all, GloveBox is fully hosted and provides an **easy-to-use, private, and secure bookmarking experience** with **local data storage** and **backup options**.
 
 *Example of GloveBox’s modern glassmorphic UI*
-![screenshot-placeholder](https://via.placeholder.com/800x400)
+![screenshot-placeholder](https://github.com/fyiimysf/GloveBox/blob/main/static/screenshots/GloveBox_ss.png)
 
 ---
 
