@@ -19,7 +19,7 @@
 		<h4 class="h6">Something went wrong.</h4>
 	</div>
 	<br />
-	<a href="/" class="btn text-primary-400/70 font-medium outline-2">Go back</a>
+	<a href="/tabs/home" class="btn text-primary-400/70 font-medium outline-2">Go back</a>
 	<Popover
 		open={openState}
 		onOpenChange={(e) => (openState = e.open)}

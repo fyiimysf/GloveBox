@@ -18,8 +18,8 @@ const config = {
 			},
 			fallback: 'plaintext',
 			routes: {
-				include: ['/*'],
-				exclude: ['<all>']
+				include: ['/fake-route'],
+				exclude: []
 			}
 		}),
 		csrf: {
