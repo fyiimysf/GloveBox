@@ -24,7 +24,7 @@
 				src={cardPage.img}
 				onerror={imgError}
 				alt="Card Image"
-				class="h-fit w-fit rounded-xl object-cover shadow-lg "
+				class="h-fit w-fit rounded-xl object-cover shadow-lg"
 			/>
 		</a>
 		<div class="p-2">
@@ -45,7 +45,7 @@
 	</div>
 	<div class="z-0 bg-black">
 		<!-- svelte-ignore a11y_img_redundant_alt -->
-		<Image
+		<img
 			src={cardPage.img}
 			onerror={imgError}
 			alt="Card Image"

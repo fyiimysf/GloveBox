@@ -99,30 +99,18 @@
 									const reader = new FileReader();
 									reader.onload = (event) => {
 										console.log(event.target);
-										if (event.target && typeof event.target.result === 'string') {
-											const data = JSON.parse(event.target.result);
-											localItems.current = data;
-											toast('Data Imported!', {
-												icon: '✅',
-												style: 'border-radius: 200px; background: #333; color: #fff;'
-											});
-										} else {
-											toast('Failed to import data!', {
-												icon: '⚠️',
-												style: 'border-radius: 200px; background: #333; color: #fff;'
-											});
-										}
-										
+										const data = JSON.parse(event.target.result);
 										localItems.current = data;
 										toast('Data Imported!', {
 											icon: '✅',
 											style: 'border-radius: 200px; background: #333; color: #fff;'
 										});
+										goto('/tabs/home');
 									};
 									reader.readAsText(file);
 								};
 								input.click();
-								goto('/tabs/home');
+								
 							}}
 							class="btn w-full bg-yellow-100/10 text-lg text-yellow-200"><ArrowUpFromLine/> Import</button
 						>

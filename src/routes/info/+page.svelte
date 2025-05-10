@@ -5,7 +5,6 @@
 	import { ArrowLeftIcon, ArrowUpRightFromSquare, Link2 } from 'lucide-svelte';
 	import { blur } from 'svelte/transition';
     let links = {
-
         website : 'https://fyiimysf.pages.dev',
         github : 'https://github.com/fyiimysf',
         linkedIn : 'https://www.linkedin.com/in/yousaf-mohammad',

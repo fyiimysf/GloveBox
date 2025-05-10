@@ -43,7 +43,6 @@
 	"dependencies": {
 		"@iconify/utils": "^2.3.0",
 		"@lucide/svelte": "^0.482.0",
-		"@sveltejs/enhanced-img": "^0.5.1",
 		"@sveu/browser": "^1.0.1",
 		"@types/cors": "^2.8.17",
 		"@types/express": "^5.0.1",

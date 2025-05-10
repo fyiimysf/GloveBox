@@ -3,7 +3,14 @@
 	import type { PageProps } from '../../$types';
 	import { bounceIn, cubicIn, elasticInOut, linear, sineOut } from 'svelte/easing';
 	import { cardPage, home, localItems } from '../../../lib/shared.svelte';
-	import { ArrowDown, ChevronRight, CircleAlert } from 'lucide-svelte';
+	import {
+		AlertTriangle,
+		ArrowDown,
+		ChevronRight,
+		CircleAlert,
+		CircleMinus,
+		Frown
+	} from 'lucide-svelte';
 	import { Link, Link2, MoreHorizontalIcon, MoreVerticalIcon } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import toast from 'svelte-french-toast';
@@ -103,7 +110,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="">
-				<div class="absolute z-6 items-center p-2">
+				<div class="absolute z-6 items-center p-2 rounded-full">
 					<DropDown data={item} />
 				</div>
 				{#if item.url !== ''}
@@ -201,103 +208,38 @@
 
 {#snippet ListLocal()}
 	{#each [...localItems.current].reverse() as item, index}
-	{#if index < 8}
-		
-	{@render Card(
-		item.img,
-		'',
-		item.title,
-		item.text,
-		item.link,
-		new Date().toLocaleDateString(),
-		home.homeLayout,
-		index,
-		item
-	)}
-	{/if}
+		{#if index < 8}
+			{@render Card(
+				item.img,
+				'',
+				item.title,
+				item.text,
+				item.link,
+				new Date().toLocaleDateString(),
+				home.homeLayout,
+				index,
+				item
+			)}
+		{/if}
 	{/each}
 {/snippet}
 
-{#snippet DropDownMenu(id?: number)}
-	<!-- svelte-ignore a11y_consider_explicit_label -->
-	<button
-		id="dropdownMenuIconButton"
-		class="text-surface-500 rounded-full p-2 backdrop-blur-lg"
-		type="button"
-		onclick={() => {
-			dropMenu = !dropMenu;
-		}}
-	>
-		<svg
-			class="h-5 w-5"
-			aria-hidden="true"
-			xmlns="http://www.w3.org/2000/svg"
-			fill="currentColor"
-			viewBox="0 0 4 15"
-		>
-			<path
-				d="M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
-			/>
-		</svg>
-	</button>
-
-	<!-- Dropdown menu -->
 	<div
-		transition:fade
-		id="dropdownDots"
-		class="z-10 {dropMenu
-			? 'visible'
-			: 'hidden'} divide-primary-600 bg-primary-900/40 w-44 divide-y rounded-lg shadow-sm backdrop-blur-lg transition-all transition-discrete"
+		in:fly={{ delay: 0, x: -100 }}
+		class="fixed inset-0 z-0 flex flex-col items-center justify-center gap-1 text-gray-300/30"
 	>
-		<ul
-			class="py-2 text-sm text-gray-700 dark:text-gray-200"
-			aria-labelledby="dropdownMenuIconButton"
-		>
-			<li>
-				<button
-					class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-				>
-					Dashboard
-				</button>
-			</li>
-			<li>
-				<div class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-					Settings
-				</div>
-			</li>
-			<li>
-				<div class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">
-					Earnings
-				</div>
-			</li>
-		</ul>
-		<div class="py-2">
-			<div
-				class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 dark:hover:text-white"
-			>
-				Separated link
-			</div>
-		</div>
+		{#if localItems.current.length < 1}
+			<CircleMinus class="size-28" />
+			<p class="h3">All Empty!</p>
+			<p class="text-sm font-bold">No Items yet</p>
+		{/if}
 	</div>
-{/snippet}
-
-<div
-	in:fly={{ delay: 0, x: -100 }}
-	class="fixed inset-0 z-0 flex flex-col items-center justify-center gap-1 text-gray-300/30"
->
-	{#if localItems.current.length < 1}
-		<CircleAlert class="size-28" />
-		<p class="h3">All Empty</p>
-		<p class="text-sm font-bold">Nothing saved yet</p>
-	{/if}
-</div>
-
-<div
-	in:fade={{ delay: 100 }}
-	class="fixed inset-0 bottom-20 z-0 flex flex-col items-center justify-end text-gray-600"
->
-	{#if localItems.current.length < 1}
-		<p>Add Item</p>
-		<ArrowDown class="size-10" />
-	{/if}
-</div>
+	<div
+		in:blur={{ delay: 100 }}
+		class="fixed inset-0 bottom-20 z-0 flex flex-col items-center justify-end text-gray-600"
+	>
+		{#if localItems.current.length < 1}
+			<p>Add Item</p>
+			<ArrowDown class="size-10" />
+		{/if}
+	</div>

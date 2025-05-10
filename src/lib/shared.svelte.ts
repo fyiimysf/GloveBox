@@ -11,8 +11,15 @@ export const firstTime = $state({ value: true });
 export const home = $state({
 	homeLayout: false,
 	savedLayout: false,
+	spaceviewLayout: false,
 	pageTitle: 'Home'
 });
+
+export const spaceview = $state({
+	pageTitle: '',
+	clr: 'purple',
+	viewItems: [],
+})
 
 export const sharedItem: {
 	title: string;

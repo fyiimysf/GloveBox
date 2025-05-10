@@ -1,22 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Cards from '$lib/components/Cards.svelte';
-	import { localSpaces } from '$lib/shared.svelte';
+	import { cardPage, localSpaces, spaceview } from '$lib/shared.svelte';
 	import { Currency } from '@lucide/svelte';
 	import { Segment } from '@skeletonlabs/skeleton-svelte';
-	import {
-		ArrowDown,
-		ChevronRight,
-		CircleAlert,
-		CircleDotDashed,
-		CircleSlash,
-		MoreVerticalIcon
-	} from 'lucide-svelte';
+	import { ArrowDown, ChevronRight, CircleMinus, CircleSlash } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
-	import { fade, fly, slide, blur } from 'svelte/transition';
+	import { fly, blur } from 'svelte/transition';
 </script>
 
-<div class="z-10 space-y-4" in:blur>
+<div class=" z-10 space-y-4" in:blur>
 	{#each [...localSpaces.current].reverse() as spaceItem}
 		<div
 			transition:fly={{ delay: 0, x: 100 }}
@@ -37,17 +30,26 @@
 										? 'bg-pink-400/10 text-pink-400 outline-pink-400'
 										: 'bg-surface-900/20 text-white outline-white'}
 
-		 z-10 rounded-xl outline-2"
+		 z-10 rounded-xl shadow-lg shadow-black/20 backdrop-blur-sm"
 		>
-			<a href="/tabs/space/spaceview">
+			<a
+				href={spaceItem.items.length > 0 ? '/tabs/space/spaceview' : '/tabs/space/spaceview'}
+				onclick={() => {
+					spaceview.pageTitle = spaceItem.name;
+					spaceview.clr = spaceItem.clr;
+					spaceview.viewItems = spaceItem.items;
+				}}
+			>
 				<div class=" flex items-stretch justify-between">
 					<span>
 						<p class="h3 pt-2 pl-3 font-medium opacity-100">{spaceItem.name}</p>
 						<p class="pl-3 text-sm opacity-100">{spaceItem.desc}</p>
 					</span>
-					<div class="p-3">
-						<ChevronRight />
-					</div>
+					{#if spaceItem.items.length > 0}
+						<div class="p-3">
+							<ChevronRight />
+						</div>
+					{/if}
 				</div>
 			</a>
 			<div class="p-2">
@@ -94,11 +96,28 @@
 													? 'bg-pink-400/30 '
 													: 'bg-surface-900/20'}
 
-						grid grid-cols-2 gap-1 overflow-auto rounded-xl p-1.5"
+						grid grid-cols-2 gap-1 overflow-auto rounded-2xl p-1.5 "
 					>
 						{#each [...spaceItem.items].reverse() as itemCard, index}
 							{#if index < 4}
-								<Cards h1={itemCard.title} img={itemCard.img} fL={itemCard.text} />
+								<button
+									onclick={() => {
+										cardPage.title = itemCard.title;
+										cardPage.img = itemCard.img;
+										cardPage.link = itemCard.link;
+										cardPage.text = itemCard.text;
+										cardPage.date = itemCard.date;
+										cardPage.url = itemCard.url;
+									}}
+								>
+									<Cards
+										h1={itemCard.title}
+										img={itemCard.img}
+										p={itemCard.text}
+										item={itemCard}
+										full={false}
+									/>
+								</button>
 							{/if}
 						{/each}
 					</div>
@@ -112,21 +131,23 @@
 	in:fly={{ delay: 0, x: 100 }}
 	class="fixed {localSpaces.current.length < 1
 		? 'inset-0'
-		: ''} z-0 flex flex-col items-center justify-center text-gray-600"
-	id="NoSpace"
+		: ''}  z-0 flex flex-col items-center justify-center gap-1 text-gray-300/30"
 >
 	{#if localSpaces.current.length < 1}
-		<CircleDotDashed class="size-28" />
-		<p class="h3">Empty Space</p>
-		<p class="text-sm font-bold">No Spaces yet</p>
+		<CircleMinus class="size-28" />
+		<p class="h3">All Empty!</p>
+		<p class="text-sm font-bold">No Space yet</p>
 	{/if}
 </div>
 
-<div in:fade={{ delay: 100 }}>
+<div
+	in:blur={{ delay: 100 }}
+	class="fixed {localSpaces.current.length < 1
+		? 'inset-0'
+		: ''} bottom-20 z-0 flex flex-col items-center justify-end text-gray-600"
+>
 	{#if localSpaces.current.length < 1}
-		<div class="fixed inset-0 bottom-20 z-0 flex flex-col items-center justify-end text-gray-600">
-			<p>Add Space</p>
-			<ArrowDown class="size-10" />
-		</div>
+		<p>Add a Space</p>
+		<ArrowDown class="size-10" />
 	{/if}
 </div>

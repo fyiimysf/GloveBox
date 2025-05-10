@@ -35,7 +35,8 @@
 		space,
 		localSpaces,
 		cardPage,
-		first
+		first,
+		spaceview
 	} from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
@@ -143,9 +144,9 @@
 				<!-- svelte-ignore a11y_missing_attribute -->
 				<div class="{first.current ? 'visible' : 'hidden'} ">
 					<img
+						src={BlobImg}
 						in:blur
 						out:blur={{ delay: 400 }}
-						src={BlobImg}
 						class="fixed inset-1 z-50 flex h-fit w-full justify-center blur-xs"
 					/>
 					<div>
@@ -153,8 +154,8 @@
 							class="absolute top-0 right-0 bottom-0 left-0 z-51 flex flex-col items-center justify-center gap-2"
 						>
 							<img
-								transition:blur={{ delay: 200 }}
 								src={appIcon}
+								transition:blur={{ delay: 200 }}
 								alt="GloveBox"
 								class="shadow-primary-200/50 size-25 rounded-4xl"
 							/>
@@ -282,31 +283,37 @@
 					<center>
 						<h1 in:fade class="h1 font-bold">{cardPage.link}</h1>
 					</center>
+				{:else if page.route.id === '/tabs/space/spaceview'}
+					<center>
+						<h1 in:fade class="h1 font-bold text-{spaceview.clr}-400">{spaceview.pageTitle}</h1>
+					</center>
 				{/if}
 			{/snippet}
 
 			{#snippet lead()}
-				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/card' || page.route.id === '/info'}
+				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/card' || page.route.id === '/info' || page.route.id === '/tabs/space/spaceview'}
 					<ArrowLeft
 						onclick={() => {
 							history.back();
 						}}
 						class="size-7"
 					/>
-				{:else if home.homeLayout}
-					<StretchHorizontal
-						onclick={() => {
-							home.homeLayout = !home.homeLayout;
-						}}
-						class="size-7"
-					/>
-				{:else}
-					<LayoutGrid
-						onclick={() => {
-							home.homeLayout = !home.homeLayout;
-						}}
-						class="size-7"
-					/>
+				{:else if page.route.id === '/tabs/home'}
+					{#if !home.homeLayout}
+						<StretchHorizontal
+							onclick={() => {
+								home.homeLayout = !home.homeLayout;
+							}}
+							class="size-7"
+						/>
+					{:else}
+						<LayoutGrid
+							onclick={() => {
+								home.homeLayout = !home.homeLayout;
+							}}
+							class="size-7"
+						/>
+					{/if}
 				{/if}
 			{/snippet}
 
@@ -351,6 +358,48 @@
 						<LayoutGrid
 							onclick={() => {
 								home.savedLayout = !home.savedLayout;
+							}}
+							class="size-7"
+						/>
+					{/if}
+				{:else if page.route.id === '/tabs/space/spaceview'}
+					<Trash
+						onclick={() => {
+							try {
+								localSpaces.current.forEach((spc: any) => {
+									if (spc.name === spaceview.pageTitle) {
+										let tempArr = localSpaces.current.filter(
+											(item: any) => item.name !== spaceview.pageTitle
+										);
+										localSpaces.current = tempArr;
+									}
+								});
+								toast.success('Space Cleared', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+								history.back();
+							} catch (e) {
+								toast.error('Space Cleared', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+								console.log('Error removing item from local storage:', e);
+							}
+						}}
+						class="size-7"
+					/>
+					{#if !home.spaceviewLayout}
+						<StretchHorizontal
+							onclick={() => {
+								home.spaceviewLayout = !home.spaceviewLayout;
+							}}
+							class="size-7"
+						/>
+					{:else}
+						<LayoutGrid
+							onclick={() => {
+								home.spaceviewLayout = !home.spaceviewLayout;
 							}}
 							class="size-7"
 						/>
@@ -686,6 +735,20 @@
 				onclick={() => {
 					let tempArr = localItems.current.filter((item: any) => item.title !== cardPage.title);
 					localItems.current = tempArr;
+					localSpaces.current.forEach((spc: any) => {
+						spc.items.forEach((item: any) => {
+							if (item.title === cardPage.title) {
+								let tempArr2 = spc.items.filter((item: any) => item.title !== cardPage.title);
+								spc.items = tempArr2;
+							}
+						});
+					});
+					console.log(localSpaces.current);
+					console.log(localItems.current);
+					toast.success('Item Deleted', {
+						style: 'border-radius: 200px; background: #333; color: #fff;',
+						duration: 1500
+					});
 					history.back();
 				}}
 				class="py-1"

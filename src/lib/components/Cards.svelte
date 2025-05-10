@@ -4,6 +4,9 @@
 	import NoImageUrl from '$lib/assets/no-image.png';
 	import { cardPage } from '$lib/shared.svelte';
 	import { blur } from 'svelte/transition';
+	import DropDown from './DropDown.svelte';
+	import { Link } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
 	// import { Pageprops } from './$types';
 
 	let {
@@ -25,7 +28,6 @@
 		full?: boolean;
 		item?: any;
 	} = $props();
-	let date = new Date().toLocaleDateString();
 	const imgError = (e: any) => (e.target.src = NoImageUrl);
 	function CardPage(
 		title: string,
@@ -44,8 +46,10 @@
 	}
 </script>
 
-<a
-	href="/card"
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	
 	onclick={() => {
 		// toast('Page yet to be made', {
 		// 	icon: '🚧',
@@ -57,7 +61,19 @@
 	class="card-link card card-hover divide-surface-200-800 block overflow-hidden"
 >
 	{#if full}
-		<div in:blur class="divide-primary-500/60 bg-surface-900 divide-y-2">
+		<div in:blur class="divide-primary-500/60 relative bg-surface-900 shadow-lg">
+			<div class="absolute shadow-lg rounded-full">
+				<DropDown data={item} />
+			</div>
+			{#if item.url !== ''}
+				<!-- svelte-ignore node_invalid_placement_ssr -->
+				<a
+					href={item.url}
+					target="_blank"
+					class=" text-primary-100 absolute shadow-lg right-3 rounded-full bg-black/5 backdrop-blur-lg"
+					><Link class="size-7 p-1" /></a
+				>
+			{/if}
 			<header>
 				<img
 					src={img}
@@ -78,12 +94,28 @@
 			</footer>
 		</div>
 	{:else}
-		<div in:blur class="card card-hover h-27 overflow-hidden rounded-xl border-2 shadow-lg">
+		<div in:blur class="card relative card-hover h-27 overflow-hidden rounded-xl shadow-lg">
+			<div class="absolute">
+				<DropDown data={item} />
+			</div>
+			<!-- svelte-ignore node_invalid_placement_ssr -->
+			{#if item.url !== ''}
+				<a
+					href={item.url}
+					target="_blank"
+					class="  text-primary-500 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
+					><Link class=" size-6 p-1" /></a
+				>
+			{/if}
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<img
 				src={img}
 				onerror={imgError}
 				class="aspect-video h-full w-full object-cover"
 				alt="card-preview"
+				onclick="{()=>{
+					goto("/card")
+				}}"
 			/>
 
 			<article class="relative bottom-8 p-1">
@@ -100,4 +132,4 @@
     </footer> -->
 		</div>
 	{/if}
-</a>
+	</div>
