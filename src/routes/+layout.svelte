@@ -25,7 +25,25 @@
 		Info,
 		MoreVertical,
 		Trash,
-		CircleMinus
+		CircleMinus,
+
+		LayoutList,
+
+		List,
+
+		LucideLayoutList,
+
+		ChevronDownCircle,
+
+		ChevronUp,
+
+		ChevronDown
+
+
+
+
+
+
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 	import {
@@ -42,7 +60,10 @@
 	let imageFile: any = $state();
 	let openPopup = $state(false);
 	onMount(() => {
-		if (page.route.id === '/tabs/home') {
+		if(page.route.id === '/'){
+			goto('/tabs/home');
+		}
+		else if (page.route.id === '/tabs/home') {
 			home.pageTitle = 'Home';
 			goto('/tabs/home');
 		} else if (page.route.id === '/tabs/space') {
@@ -102,6 +123,7 @@
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { ChevronUpCircle } from '@lucide/svelte';
 
 	//Chips
 	let chipsSelect = $state(false);
@@ -285,7 +307,7 @@
 					</center>
 				{:else if page.route.id === '/tabs/space/spaceview'}
 					<center>
-						<h1 in:fade class="h1 font-bold text-{spaceview.clr}-400">{spaceview.pageTitle}</h1>
+						<h1 in:fade class="h1 truncate w-70 font-bold text-{spaceview.clr}-400">{spaceview.pageTitle}</h1>
 					</center>
 				{/if}
 			{/snippet}
@@ -310,6 +332,22 @@
 						<LayoutGrid
 							onclick={() => {
 								home.homeLayout = !home.homeLayout;
+							}}
+							class="size-7"
+						/>
+					{/if}
+				{:else if page.route.id === '/tabs/space'}
+					{#if !home.savedLayout}
+						<ChevronDown
+							onclick={() => {
+								home.savedLayout = !home.savedLayout;
+							}}
+							class="size-7"
+						/>
+					{:else}
+						<ChevronUp
+							onclick={() => {
+								home.savedLayout = !home.savedLayout;
 							}}
 							class="size-7"
 						/>
@@ -429,6 +467,7 @@
 						class="btn-icon badge preset-filled hover:preset-tonal rounded-full"
 						onclick={() => {
 							openPopup = !openPopup;
+							chipName = '';
 						}}><X /></button
 					>
 				</header>
@@ -467,7 +506,7 @@
 				<hr class="hr" />
 				{#if localSpaces.current.length > 0}
 					<p class="text-sm">Assign a Space</p>
-					<div class="flex gap-3">
+					<div class="flex gap-3 overflow-auto pb-2">
 						{#each localSpaces.current as obj}
 							{#if obj.name === chipName}
 								<button

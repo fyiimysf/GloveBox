@@ -8,8 +8,8 @@
 	import { onMount } from 'svelte';
 </script>
 
-<div in:scale class="relative grid space-y-6">
-	{#each localSpaces.current as spaceItem}
+{#each localSpaces.current as spaceItem}
+<div in:scale class="relative flex just space-y-6">
 		<div>
 			<div
 				in:fly={{ y: 70 }}
@@ -28,29 +28,29 @@
 					>
 						<Cards
 							h1={itemCard.title}
+							p={itemCard.text}
 							img={itemCard.img}
-							fL={itemCard.text}
+							fL={itemCard.link}
 							fR={itemCard.date}
 							full={home.spaceviewLayout}
+							item={itemCard}
 						/>
 					</button>
 				{/each}
 				<br/>
 			</div>
 		</div>
-	{/each}
-</div>
-
-{#if spaceview.viewItems.length < 1}
-	<div
-		class="fixed inset-0 z-0 flex flex-col items-center justify-center text-{spaceview.clr}-400 opacity-30"
-	>
-		<CircleSlash class="size-28" />
-		<p class="h3">Empty Space</p>
-		<p class="text-sm font-bold">No Spaces yet</p>
 	</div>
-{/if}
-<button
+	
+	<div
+	class="fixed { spaceItem.items.length < 1 ? 'visible' : 'hidden'} inset-0 -z-10 flex flex-col items-center justify-center text-{spaceview.clr}-400 opacity-30"
+	>
+	<CircleSlash class="size-28" />
+	<p class="h3">Empty Space</p>
+	<p class="text-sm font-bold">No Spaces yet</p>
+	</div>
+	{/each}
+	<button
 	in:fly={{ delay: 10, y: 100 }}
 	type="button"
 	class="btn-icon z-10 bg-primary-950/70 fixed bottom-0 left-0 h-10 w-full rounded-xs backdrop-blur-xs"
@@ -58,8 +58,8 @@
 		history.back();
 	}}
 >
-	<span class="bottom-0 flex flex-1/2 items-center gap-[28%]">
-		<ArrowLeft class="size-7" />
-		<h3 class="h4">Go Back</h3>
-	</span>
+<span class="bottom-0 flex flex-1/2 items-center gap-[28%]">
+	<ArrowLeft class="size-7" />
+	<h3 class="h4">Go Back</h3>
+</span>
 </button>

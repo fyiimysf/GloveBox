@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Cards from '$lib/components/Cards.svelte';
-	import { cardPage, localSpaces, spaceview } from '$lib/shared.svelte';
+	import { cardPage, home, localSpaces, spaceview } from '$lib/shared.svelte';
 	import { Currency } from '@lucide/svelte';
 	import { Segment } from '@skeletonlabs/skeleton-svelte';
-	import { ArrowDown, ChevronRight, CircleMinus, CircleSlash } from 'lucide-svelte';
+	import { ArrowDown, ChevronRight, CircleMinus, CircleSlash, CircleSlash2 } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
-	import { fly, blur } from 'svelte/transition';
+	import { fly, blur, fade, slide } from 'svelte/transition';
 </script>
 
 <div class=" z-10 space-y-4" in:blur>
@@ -30,7 +30,7 @@
 										? 'bg-pink-400/10 text-pink-400 outline-pink-400'
 										: 'bg-surface-900/20 text-white outline-white'}
 
-		 z-10 rounded-xl shadow-lg shadow-black/20 backdrop-blur-sm"
+		 z-10 rounded-xl shadow-lg shadow-black/20 backdrop-blur "
 		>
 			<a
 				href={spaceItem.items.length > 0 ? '/tabs/space/spaceview' : '/tabs/space/spaceview'}
@@ -40,19 +40,23 @@
 					spaceview.viewItems = spaceItem.items;
 				}}
 			>
-				<div class=" flex items-stretch justify-between">
+				<div class=" flex items-stretch justify-between pb-3 ">
 					<span>
-						<p class="h3 pt-2 pl-3 font-medium opacity-100">{spaceItem.name}</p>
+						<p class="p text-2xl truncate pt-2 pl-3 font-medium opacity-100 w-60">{spaceItem.name}</p>
 						<p class="pl-3 text-sm opacity-100">{spaceItem.desc}</p>
 					</span>
+					<div class="pr-3 pt-2.5 flex">
 					{#if spaceItem.items.length > 0}
-						<div class="p-3">
-							<ChevronRight />
+							<p class="font-bold text-lg">{spaceItem.items.length}</p>
+							<ChevronRight class='size-8' />
+							{:else}
+							<CircleMinus class='opacity-40 size-8' />
+							{/if}
 						</div>
-					{/if}
 				</div>
 			</a>
-			<div class="p-2">
+			{#if home.savedLayout}
+			<div transition:slide class="p-2">
 				{#if spaceItem.items.length < 1}
 					<div
 						class="
@@ -109,7 +113,8 @@
 										cardPage.date = itemCard.date;
 										cardPage.url = itemCard.url;
 									}}
-								>
+								>	
+									
 									<Cards
 										h1={itemCard.title}
 										img={itemCard.img}
@@ -123,6 +128,8 @@
 					</div>
 				{/if}
 			</div>
+			{/if}
+
 		</div>
 	{/each}
 </div>

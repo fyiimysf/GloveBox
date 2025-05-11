@@ -2,7 +2,7 @@
 	import { blur, draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
 	import { bounceIn, cubicIn, elasticInOut, linear, sineOut } from 'svelte/easing';
-	import { cardPage, home, localItems } from '../../../lib/shared.svelte';
+	import { cardPage, home, localItems, spaceview } from '../../../lib/shared.svelte';
 	import {
 		AlertTriangle,
 		ArrowDown,
@@ -14,7 +14,7 @@
 	import { Link, Link2, MoreHorizontalIcon, MoreVerticalIcon } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import toast from 'svelte-french-toast';
-	import DropDown from '$lib/components/DropDown.svelte';
+	import DropDown from '$lib/components/DropDownButton.svelte';
 	import NoImageUrl from '$lib/assets/no-image.png';
 	import Placeholder from '$lib/components/Placeholder.svelte';
 	// import Card from '../card[id]/Cards.svelte';
@@ -51,13 +51,11 @@
 
 <div in:blur class="relative z-5 grid space-y-3">
 	{#if localItems.current.length > 0}
-		<a href="/tabs/home/saved">
+		<a href="/tabs/home/saved" onclick="{()=>{spaceview.clr = 'purple'}}">
 			<div class="flex items-stretch justify-between">
 				<p
 					class="h3 p-1 font-thin"
-					onfocusout={() => {
-						toast('Saved ');
-					}}
+					
 				>
 					Saved
 				</p>
@@ -150,7 +148,7 @@
 			<div
 				class=" card border-surface-200-800/0 card-hover relative block h-fit w-full rounded-xl border-[0.5px]"
 			>
-				<div class="absolute">
+				<div class="absolute ">
 					<DropDown data={item} />
 				</div>
 				<!-- svelte-ignore node_invalid_placement_ssr -->

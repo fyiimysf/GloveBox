@@ -2,19 +2,19 @@
 	import { page } from '$app/state';
 	import toast from 'svelte-french-toast';
 	import NoImageUrl from '$lib/assets/no-image.png';
-	import { cardPage } from '$lib/shared.svelte';
+	import { cardPage, spaceview } from '$lib/shared.svelte';
 	import { blur } from 'svelte/transition';
-	import DropDown from './DropDown.svelte';
+	import DropDown from './DropDownButton.svelte';
 	import { Link } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
 	// import { Pageprops } from './$types';
 
 	let {
-		img = 'https://picsum.photos/200',
-		h6 = 'Announcements',
-		h1 = 'Skeleton is Awesome',
-		p = 'Lorem ipsum dolor sit amet consectetur adipisicing elit. ',
-		fL = 'Posted by Admin',
+		img = '',
+		h6 = '',
+		h1 = '',
+		p = '',
+		fL = '',
 		fR = new Date().toLocaleDateString(),
 		full = false,
 		item = ''
@@ -58,11 +58,11 @@
 		// });
 		CardPage(item.title, item.img, item.link, item.text, item.date, item.url);
 	}}
-	class="card-link card card-hover divide-surface-200-800 block overflow-hidden"
+	class=" card  divide-surface-200-800 justify-start overflow-hidden" 
 >
 	{#if full}
-		<div in:blur class="divide-primary-500/60 relative bg-surface-900 shadow-lg">
-			<div class="absolute shadow-lg rounded-full">
+		<div in:blur class=" bg-surface-900 shadow-lg">
+			<div class="absolute shadow-lg rounded-full z-100">
 				<DropDown data={item} />
 			</div>
 			{#if item.url !== ''}
@@ -70,19 +70,26 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class=" text-primary-100 absolute shadow-lg right-3 rounded-full bg-black/5 backdrop-blur-lg"
+					class=" text-primary-400 absolute shadow-lg right-3 rounded-full bg-black/5 backdrop-blur-lg"
 					><Link class="size-7 p-1" /></a
 				>
 			{/if}
 			<header>
+				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 				<img
 					src={img}
 					onerror={imgError}
 					class="aspect-video w-full object-cover"
 					alt="card-preview"
+					onclick="{()=>{
+						goto("/card")
+					}}"
 				/>
 			</header>
-			<article class=" px-3 py-1">
+			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+			<article onclick="{()=>{
+				goto("/card")
+			}}" class=" px-3 py-1">
 				<div>
 					<p class="p">{h1}</p>
 				</div>
@@ -95,7 +102,7 @@
 		</div>
 	{:else}
 		<div in:blur class="card relative card-hover h-27 overflow-hidden rounded-xl shadow-lg">
-			<div class="absolute">
+			<div class="absolute shadow-lg rounded-full z-100">
 				<DropDown data={item} />
 			</div>
 			<!-- svelte-ignore node_invalid_placement_ssr -->
@@ -118,9 +125,9 @@
 				}}"
 			/>
 
-			<article class="relative bottom-8 p-1">
+			<article class="relative bg-black/30 backdrop-blur-sm  bottom-8 p-1">
 				<span class="-space-y-2">
-					<p class="p truncate px-1 invert-45">{h1}</p>
+					<p class="p truncate px-1">{h1}</p>
 					<!-- <small class="w-fit truncate rounded-lg bg-black/20 px-1 opacity-60">{fL}</small> -->
 				</span>
 
