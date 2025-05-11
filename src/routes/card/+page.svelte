@@ -29,8 +29,8 @@
 		</a>
 		<div class="p-2">
 			<h2 class="mb-2 text-xl font-bold">{cardPage.title}</h2>
-			<a href={cardPage.url} target="_blank" class="text-primary-300 text-sm">{cardPage.url}</a>
-			<p class="text-lg">{cardPage.text}</p>
+			<a href={cardPage.url} target="_blank" class="text-primary-300 text-sm flex w-60 truncate">{cardPage.url}</a>
+			<p class="text-lg text-wrap">{cardPage.text}</p>
 		</div>
 		<button
 			transition:slide

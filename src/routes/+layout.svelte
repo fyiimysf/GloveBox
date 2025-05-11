@@ -506,7 +506,7 @@
 				<hr class="hr" />
 				{#if localSpaces.current.length > 0}
 					<p class="text-sm">Assign a Space</p>
-					<div class="flex gap-3 overflow-auto pb-2">
+					<div class="flex gap-2 overflow-auto pb-2">
 						{#each localSpaces.current as obj}
 							{#if obj.name === chipName}
 								<button
@@ -541,6 +541,7 @@
 				<article>
 					<button
 						type="submit"
+						disabled={loading && (sharedItem.title === '' && sharedItem.text === '')}
 						class="btn preset-filled w-full p-3"
 						onclick={() => {
 							console.log(url);
@@ -551,20 +552,27 @@
 									// console.log(imageToBase64(ogData.image))
 									sharedItem.img = ogData.image;
 								}
-								sharedItem.title = ogData.title;
-								sharedItem.text = ogData.description;
-								sharedItem.link = ogData.siteName;
-								sharedItem.url = url;
-								localItems.current.push(sharedItem);
-								addItemToSpace(sharedItem);
-								openPopup = false;
-								url =
-									sharedItem.img =
-									sharedItem.link =
-									sharedItem.text =
-									sharedItem.title =
-									sharedItem.url =
-										'';
+								if(ogData){
+									sharedItem.title = ogData.title;
+									sharedItem.text = ogData.description;
+									sharedItem.link = ogData.siteName;
+									sharedItem.url = url;
+									localItems.current.push(sharedItem);
+									addItemToSpace(sharedItem);
+									openPopup = false;
+									url =
+										sharedItem.img =
+										sharedItem.link =
+										sharedItem.text =
+										sharedItem.title =
+										sharedItem.url =
+											'';
+								}else {
+									toast.error('Error fetching OpenGraph data', {
+										style: 'border-radius: 200px; background: #333; color: #fff;',
+										duration: 1500
+									});
+								}
 							} else if (sharedItem.title !== '' && sharedItem.text !== '') {
 								if (sharedItem.img === '') {
 									sharedItem.img = noImageUrl;
@@ -583,14 +591,27 @@
 									sharedItem.title =
 									sharedItem.url =
 										'';
-							} else {
-								console.log('Important Fields Empty');
-								toast.error('Important fields are missing', {
+							} 
+							else if (url !== '') {
+								toast.error('Error fetching OpenGraph data try Again', {
 									style: 'border-radius: 200px; background: #333; color: #fff;',
 									duration: 1500
 								});
 							}
-						}}>Add Item</button
+							else  {
+								console.log('Important Fields Empty');
+								toast.error("Important fields are missing", {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							} 
+						}}>
+						{#if loading}
+							<CircleDashed class="size-8 animate-spin" />
+						{:else}
+							Add Item
+						{/if}
+						</button
 					>
 				</article>
 			</form>
