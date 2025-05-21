@@ -1,12 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Cards from '$lib/components/Cards.svelte';
-	import { cardPage, home, localSpaces, spaceview } from '$lib/shared.svelte';
+	import { cardPage, home, localSpaces, space, spaceview } from '$lib/shared.svelte';
 	import { Currency } from '@lucide/svelte';
 	import { Segment } from '@skeletonlabs/skeleton-svelte';
-	import { ArrowDown, ChevronRight, CircleMinus, CircleSlash, CircleSlash2 } from 'lucide-svelte';
+	import {
+		ArrowDown,
+		ChevronRight,
+		CircleMinus,
+		CircleSlash,
+		CircleSlash2,
+		Trash,
+		X
+	} from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 	import { fly, blur, fade, slide } from 'svelte/transition';
+	$effect(() => {
+		// $inspect(spaceview);
+	});
+	function emptyToast() {
+		toast(spaceview.pageTitle + ' is Empty', {
+			style: 'border-radius: 200px; background: #333; color: #fff;',
+			duration: 1200
+		});
+	}
 </script>
 
 <div class=" z-10 space-y-4" in:blur>
@@ -30,106 +47,125 @@
 										? 'bg-pink-400/10 text-pink-400 outline-pink-400'
 										: 'bg-surface-900/20 text-white outline-white'}
 
-		 z-10 rounded-xl shadow-lg shadow-black/20 backdrop-blur "
+		 z-10 rounded-2xl shadow-lg shadow-black/20 backdrop-blur"
 		>
 			<a
-				href={spaceItem.items.length > 0 ? '/tabs/space/spaceview' : '/tabs/space/spaceview'}
+				href={spaceItem.items.length > 0 ? '/tabs/space/spaceview' : ''}
 				onclick={() => {
 					spaceview.pageTitle = spaceItem.name;
 					spaceview.clr = spaceItem.clr;
 					spaceview.viewItems = spaceItem.items;
+					if (spaceItem.items.length < 1) {
+						emptyToast();
+					}
 				}}
 			>
-				<div class=" flex items-stretch justify-between pb-3 ">
+				<div class=" flex items-stretch justify-between pb-3">
 					<span>
-						<p class="p text-2xl truncate pt-2 pl-3 font-medium opacity-100 w-60">{spaceItem.name}</p>
-						<p class="pl-3 text-sm opacity-100">{spaceItem.desc}</p>
+						<p class="p w-50 truncate pt-2 pl-3 text-2xl font-medium opacity-100">
+							{spaceItem.name}
+						</p>
+						<p class="w-60 truncate pl-3 text-sm opacity-100">{spaceItem.desc}</p>
 					</span>
-					<div class="pr-3 pt-2.5 flex">
-					{#if spaceItem.items.length > 0}
-							<p class="font-bold text-lg">{spaceItem.items.length}</p>
-							<ChevronRight class='size-8' />
-							{:else}
-							<CircleMinus class='opacity-40 size-8' />
-							{/if}
-						</div>
+					<div class="flex pt-2.5 pr-3">
+						{#if spaceItem.items.length > 0}
+							<p class="text-lg font-bold">{spaceItem.items.length}</p>
+							<ChevronRight class="size-8" />
+						{:else if home.spaceDelete}
+							<X
+								class="size-8 text-red-400"
+								onclick={() => {
+									let tempArr = localSpaces.current.filter(
+										(item: any) => item.name !== spaceItem.name
+									);
+									localSpaces.current = tempArr;
+									console.log(localSpaces.current);
+									toast(spaceItem.name + ' Deleted', {
+										icon: '🗑️',
+										style: ' border-radius: 200px; background: #333; color: #fff;',
+										duration: 3000
+									});
+								}}
+							/>
+						{:else}
+							<CircleMinus class="size-8 opacity-40" />
+						{/if}
+					</div>
 				</div>
 			</a>
 			{#if home.savedLayout}
-			<div transition:slide class="p-2">
-				{#if spaceItem.items.length < 1}
-					<div
-						class="
+				<div transition:slide class="p-2">
+					{#if spaceItem.items.length < 1}
+						<div
+							class="
 						{spaceItem.clr === 'purple'
-							? 'bg-purple-400/30 '
-							: spaceItem.clr === 'red'
-								? 'bg-red-400/30 '
-								: spaceItem.clr === 'green'
-									? 'bg-green-400/30 '
-									: spaceItem.clr === 'blue'
-										? 'bg-blue-400/30 '
-										: spaceItem.clr === 'yellow'
-											? 'bg-yellow-400/30 '
-											: spaceItem.clr === 'orange'
-												? 'bg-orange-400/30 '
-												: spaceItem.clr === 'pink'
-													? 'bg-pink-400/30 '
-													: 'bg-surface-900/20 '}
+								? 'bg-purple-400/30 '
+								: spaceItem.clr === 'red'
+									? 'bg-red-400/30 '
+									: spaceItem.clr === 'green'
+										? 'bg-green-400/30 '
+										: spaceItem.clr === 'blue'
+											? 'bg-blue-400/30 '
+											: spaceItem.clr === 'yellow'
+												? 'bg-yellow-400/30 '
+												: spaceItem.clr === 'orange'
+													? 'bg-orange-400/30 '
+													: spaceItem.clr === 'pink'
+														? 'bg-pink-400/30 '
+														: 'bg-surface-900/20 '}
 
                      flex flex-col items-center justify-stretch rounded-xl p-4 opacity-30"
-					>
-						<CircleSlash class="size-10" />
-						<h5 class="h5 pt-2">No Items</h5>
-					</div>
-				{:else}
-					<div
-						class="
+						>
+							<CircleSlash class="size-10" />
+							<h5 class="h5 pt-2">No Items</h5>
+						</div>
+					{:else}
+						<div
+							class="
 						{spaceItem.clr === 'purple'
-							? 'bg-purple-400/30 '
-							: spaceItem.clr === 'red'
-								? 'bg-red-400/30 '
-								: spaceItem.clr === 'green'
-									? 'bg-green-400/30 '
-									: spaceItem.clr === 'blue'
-										? 'bg-blue-400/30 '
-										: spaceItem.clr === 'yellow'
-											? 'bg-yellow-400/30 '
-											: spaceItem.clr === 'orange'
-												? 'bg-orange-400/30 '
-												: spaceItem.clr === 'pink'
-													? 'bg-pink-400/30 '
-													: 'bg-surface-900/20'}
+								? 'bg-purple-400/30 '
+								: spaceItem.clr === 'red'
+									? 'bg-red-400/30 '
+									: spaceItem.clr === 'green'
+										? 'bg-green-400/30 '
+										: spaceItem.clr === 'blue'
+											? 'bg-blue-400/30 '
+											: spaceItem.clr === 'yellow'
+												? 'bg-yellow-400/30 '
+												: spaceItem.clr === 'orange'
+													? 'bg-orange-400/30 '
+													: spaceItem.clr === 'pink'
+														? 'bg-pink-400/30 '
+														: 'bg-surface-900/20'}
 
-						grid grid-cols-2 gap-1 overflow-auto rounded-2xl p-1.5 "
-					>
-						{#each [...spaceItem.items].reverse() as itemCard, index}
-							{#if index < 4}
-								<button
-									onclick={() => {
-										cardPage.title = itemCard.title;
-										cardPage.img = itemCard.img;
-										cardPage.link = itemCard.link;
-										cardPage.text = itemCard.text;
-										cardPage.date = itemCard.date;
-										cardPage.url = itemCard.url;
-									}}
-								>	
-									
-									<Cards
-										h1={itemCard.title}
-										img={itemCard.img}
-										p={itemCard.text}
-										item={itemCard}
-										full={false}
-									/>
-								</button>
-							{/if}
-						{/each}
-					</div>
-				{/if}
-			</div>
+						grid grid-cols-2 gap-1 overflow-auto rounded-2xl p-1.5"
+						>
+							{#each [...spaceItem.items].reverse() as itemCard, index}
+								{#if index < 4}
+									<button
+										onclick={() => {
+											cardPage.title = itemCard.title;
+											cardPage.img = itemCard.img;
+											cardPage.link = itemCard.link;
+											cardPage.text = itemCard.text;
+											cardPage.date = itemCard.date;
+											cardPage.url = itemCard.url;
+										}}
+									>
+										<Cards
+											h1={itemCard.title}
+											img={itemCard.img}
+											p={itemCard.text}
+											item={itemCard}
+											full={false}
+										/>
+									</button>
+								{/if}
+							{/each}
+						</div>
+					{/if}
+				</div>
 			{/if}
-
 		</div>
 	{/each}
 </div>
@@ -158,3 +194,6 @@
 		<ArrowDown class="size-10" />
 	{/if}
 </div>
+
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->

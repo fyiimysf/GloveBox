@@ -12,14 +12,15 @@ export const home = $state({
 	homeLayout: false,
 	savedLayout: false,
 	spaceviewLayout: false,
+	spaceDelete: false,
 	pageTitle: 'Home'
 });
 
-export const spaceview = $state({
+export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $state({
 	pageTitle: '',
 	clr: 'purple',
-	viewItems: [],
-})
+	viewItems: []
+});
 
 export const sharedItem: {
 	title: string;

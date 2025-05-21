@@ -49,6 +49,7 @@
 		"@unpic/svelte": "^1.0.0",
 		"lucide-svelte": "^0.482.0",
 		"node-html-parser": "^7.0.1",
-		"svelte-french-toast": "^1.2.0"
+		"svelte-french-toast": "^1.2.0",
+		"svelte-gestures": "^5.1.4"
 	}
 }

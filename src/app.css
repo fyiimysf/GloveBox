@@ -5,12 +5,12 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
-
-
-
 @source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
 
 html,
 body {
-    @apply h-full;
+	@apply h-full;
+}
+@theme {
+	--breakpoint-xs: 24rem;
 }

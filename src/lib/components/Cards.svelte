@@ -49,7 +49,6 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	
 	onclick={() => {
 		// toast('Page yet to be made', {
 		// 	icon: '🚧',
@@ -58,11 +57,11 @@
 		// });
 		CardPage(item.title, item.img, item.link, item.text, item.date, item.url);
 	}}
-	class=" card  divide-surface-200-800 justify-start overflow-hidden" 
+	class=" card divide-surface-200-800 justify-start overflow-hidden"
 >
 	{#if full}
 		<div in:blur class=" bg-surface-900 shadow-lg">
-			<div class="absolute shadow-lg rounded-full z-100">
+			<div class="absolute m-1 rounded-full shadow-lg">
 				<DropDown data={item} />
 			</div>
 			{#if item.url !== ''}
@@ -70,7 +69,7 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class=" text-primary-400 absolute shadow-lg right-3 rounded-full bg-black/5 backdrop-blur-lg"
+					class=" text-primary-400 absolute right-3 rounded-full bg-black/5 shadow-lg backdrop-blur-lg"
 					><Link class="size-7 p-1" /></a
 				>
 			{/if}
@@ -81,15 +80,18 @@
 					onerror={imgError}
 					class="aspect-video w-full object-cover"
 					alt="card-preview"
-					onclick="{()=>{
-						goto("/card")
-					}}"
+					onclick={() => {
+						goto('/card');
+					}}
 				/>
 			</header>
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-			<article onclick="{()=>{
-				goto("/card")
-			}}" class=" px-3 py-1">
+			<article
+				onclick={() => {
+					goto('/card');
+				}}
+				class=" px-3 py-1"
+			>
 				<div>
 					<p class="p">{h1}</p>
 				</div>
@@ -101,18 +103,20 @@
 			</footer>
 		</div>
 	{:else}
-		<div in:blur class="card relative card-hover h-27 overflow-hidden rounded-xl shadow-lg">
-			<div class="absolute shadow-lg rounded-full z-100">
-				<DropDown data={item} />
-			</div>
-			<!-- svelte-ignore node_invalid_placement_ssr -->
-			{#if item.url !== ''}
-				<a
-					href={item.url}
-					target="_blank"
-					class="  text-primary-500 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
-					><Link class=" size-6 p-1" /></a
-				>
+		<div in:blur class="card card-hover relative h-27 overflow-hidden rounded-xl shadow-lg">
+			{#if page.route.id === 'tabs/space'}
+				<div class="absolute z-100 rounded-full shadow-lg">
+					<DropDown data={item} />
+				</div>
+				<!-- svelte-ignore node_invalid_placement_ssr -->
+				{#if item.url !== ''}
+					<a
+						href={item.url}
+						target="_blank"
+						class="  text-primary-500 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
+						><Link class=" size-6 p-1" /></a
+					>
+				{/if}
 			{/if}
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<img
@@ -120,12 +124,12 @@
 				onerror={imgError}
 				class="aspect-video h-full w-full object-cover"
 				alt="card-preview"
-				onclick="{()=>{
-					goto("/card")
-				}}"
+				onclick={() => {
+					goto('/card');
+				}}
 			/>
 
-			<article class="relative bg-black/30 backdrop-blur-sm  bottom-8 p-1">
+			<article class="relative bottom-8 rounded-b-xl bg-black/30 p-1 backdrop-blur-sm">
 				<span class="-space-y-2">
 					<p class="p truncate px-1">{h1}</p>
 					<!-- <small class="w-fit truncate rounded-lg bg-black/20 px-1 opacity-60">{fL}</small> -->
@@ -139,4 +143,4 @@
     </footer> -->
 		</div>
 	{/if}
-	</div>
+</div>

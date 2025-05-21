@@ -8,12 +8,8 @@
 		Trash,
 		Settings,
 		DownloadCloud,
-
 		ArrowDownFromLine,
-
 		ArrowUpFromLine
-
-
 	} from 'lucide-svelte';
 	import type { PageData } from '../$types';
 	import { Accordion, Switch } from '@skeletonlabs/skeleton-svelte';
@@ -23,6 +19,7 @@
 	import { goto } from '$app/navigation';
 	import toast from 'svelte-french-toast';
 	import { Info } from '@lucide/svelte';
+	import LongPressMenu from '$lib/components/LongPressMenu.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let disturb = $state(false);
@@ -46,10 +43,8 @@
 			<Accordion.Item value="1">
 				{#snippet lead()}<Settings size={24} />{/snippet}
 				{#snippet control()}
-				General
-				<p class="text-xs text-gray-400">
-					Manage your settings and preferences.
-				</p>
+					General
+					<p class="text-xs text-gray-400">Manage your settings and preferences.</p>
 				{/snippet}
 				{#snippet panel()}
 					<div>
@@ -63,7 +58,7 @@
 								></Switch>
 							</div>
 							<hr class="hr" />
-							
+							<LongPressMenu />
 						</section>
 					</div>
 				{/snippet}
@@ -74,19 +69,17 @@
 				{#snippet lead()}<DownloadCloud class="" size={24} />{/snippet}
 				{#snippet control()}
 					<p class="">Backup</p>
-					<p class="text-xs text-gray-400">
-						Backup your data to a file or import from a file.
-					</p>
+					<p class="text-xs text-gray-400">Backup your data to a file or import from a file.</p>
 				{/snippet}
 				{#snippet panel()}
-					<div class="btn flex items-stretch justify-around text-red-400">
+					<div class="btn xs:flex-row flex flex-col items-center justify-between text-red-400">
 						<button
-							onclick={() => { 
+							onclick={() => {
 								const input = document.createElement('input');
 								input.type = 'file';
 								input.accept = '.json';
 								input.onchange = (e) => {
-									const file:any = e.target?.files[0];
+									const file: any = e.target?.files[0];
 									console.log(file.result);
 									if (file.type !== 'application/json') {
 										toast('Invalid file type!', {
@@ -95,7 +88,7 @@
 										});
 										return;
 									}
-									
+
 									const reader = new FileReader();
 									reader.onload = (event) => {
 										console.log(event.target);
@@ -110,9 +103,9 @@
 									reader.readAsText(file);
 								};
 								input.click();
-								
 							}}
-							class="btn w-full bg-yellow-100/10 text-lg text-yellow-200"><ArrowUpFromLine/> Import</button
+							class="btn w-full bg-yellow-100/10 text-lg text-yellow-200"
+							><ArrowDownFromLine /> Import</button
 						>
 						<button
 							onclick={() => {
@@ -123,7 +116,7 @@
 									});
 									return;
 								}
-								const data = JSON.stringify(localItems.current)
+								const data = JSON.stringify(localItems.current);
 								const blob = new Blob([data], { type: 'application/json' });
 								const url = URL.createObjectURL(blob);
 								const a = document.createElement('a');
@@ -133,7 +126,8 @@
 								a.click();
 								document.body.removeChild(a);
 							}}
-							class="btn w-full bg-cyan-200/10 text-lg text-cyan-400">Export<ArrowDownFromLine/></button
+							class="btn w-full bg-cyan-200/10 text-lg text-cyan-400"
+							>Export<ArrowUpFromLine /></button
 						>
 					</div>
 				{/snippet}
@@ -153,30 +147,14 @@
 							onclick={() => {
 								formatDialogue = true;
 							}}
-							class="btn w-full p-2 bg-red-300/10">Delete Everything</button
+							class="btn w-full bg-red-300/10 p-2">Delete Everything</button
 						>
 					</div>
 				{/snippet}
 			</Accordion.Item>
 		</Accordion>
 	</div>
-	<div>
-		<button
-			in:fly={{ delay: 0, y: 100 }}
-			type="button"
-			class=" bg-primary-950/70 fixed bottom-0 left-0 h-[7%] w-[100%] backdrop-blur-xs"
-			onclick={() => {
-				history.back();
-			}}
-		>
-			<span class="flex items-stretch justify-around">
-				<ArrowLeft class="size-8" />
-				<h3 class="h4">Go Back</h3>
-				<!-- svelte-ignore element_invalid_self_closing_tag -->
-				<div class="size-8" />
-			</span>
-		</button>
-	</div>
+	<div></div>
 	{#if formatDialogue}
 		<div
 			transition:fade
@@ -187,10 +165,23 @@
 	{/if}
 </main>
 
+<!-- Back Button -->
+<button
+	in:slide
+	onclick={() => {
+		history.back();
+	}}
+	class="btn bg-primary-800/50 fixed bottom-3 z-10 h-12 w-[94%] rounded-lg"
+>
+	<ArrowLeft />
+	Go Back
+</button>
+
 {#snippet FormatDialogue()}
 	<div class="card bg-primary-300/5 m-4 w-full max-w-md px-4 py-8 text-center">
-		<div class="flex flex-col items-center justify-center gap-4">
-			<p class="text-center text-xl font-bold">Are you sure you want to delete everything?</p>
+		<div class="flex flex-col items-center justify-center gap-2">
+			<p class="text-center text-xl font-bold">Delete everything?</p>
+			<p class="text-center font-mono text-xs">can't be undone</p>
 			<div class="flex w-full items-center justify-around gap-4">
 				<button
 					onclick={() => {
@@ -203,14 +194,14 @@
 						});
 					}}
 					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 text-lg font-bold text-red-400"
-					>Yes</button
+					>Yes, Im Sure</button
 				>
 				<button
 					onclick={() => {
 						formatDialogue = false;
 					}}
 					class="btn btn-secondary w-full bg-green-300/20 p-2 text-lg font-bold text-green-300"
-					>No</button
+					>No, I dont</button
 				>
 			</div>
 		</div>

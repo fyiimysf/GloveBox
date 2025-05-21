@@ -26,24 +26,8 @@
 		MoreVertical,
 		Trash,
 		CircleMinus,
-
-		LayoutList,
-
-		List,
-
-		LucideLayoutList,
-
-		ChevronDownCircle,
-
 		ChevronUp,
-
 		ChevronDown
-
-
-
-
-
-
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 	import {
@@ -60,10 +44,9 @@
 	let imageFile: any = $state();
 	let openPopup = $state(false);
 	onMount(() => {
-		if(page.route.id === '/'){
+		if (page.route.id === '/') {
 			goto('/tabs/home');
-		}
-		else if (page.route.id === '/tabs/home') {
+		} else if (page.route.id === '/tabs/home') {
 			home.pageTitle = 'Home';
 			goto('/tabs/home');
 		} else if (page.route.id === '/tabs/space') {
@@ -111,6 +94,16 @@
 
 		try {
 			ogData = await fetchOgData(url);
+			if (ogData.image === '') {
+				sharedItem.img = noImageUrl;
+			} else {
+				// console.log(imageToBase64(ogData.image))
+				sharedItem.img = ogData.image;
+			}
+			sharedItem.title = ogData.title;
+			sharedItem.text = ogData.description;
+			sharedItem.link = ogData.siteName;
+			sharedItem.url = url;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'An error occurred';
 		} finally {
@@ -123,7 +116,7 @@
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { ChevronUpCircle } from '@lucide/svelte';
+	import { ChevronUpCircle, CircleX, Trash2 } from '@lucide/svelte';
 
 	//Chips
 	let chipsSelect = $state(false);
@@ -240,6 +233,7 @@
 								sharedItem.title =
 								sharedItem.url =
 									'';
+							chipName = '';
 							openPopup = true;
 						}}
 					>
@@ -303,11 +297,13 @@
 					</center>
 				{:else if page.route.id === '/card'}
 					<center>
-						<h1 in:fade class="h1 font-bold">{cardPage.link}</h1>
+						<h1 in:fade class="h1 w-70 truncate font-bold">{cardPage.link}</h1>
 					</center>
 				{:else if page.route.id === '/tabs/space/spaceview'}
 					<center>
-						<h1 in:fade class="h1 truncate w-70 font-bold text-{spaceview.clr}-400">{spaceview.pageTitle}</h1>
+						<h1 in:fade class="h1 w-70 truncate font-bold text-{spaceview.clr}-400">
+							{spaceview.pageTitle}
+						</h1>
 					</center>
 				{/if}
 			{/snippet}
@@ -359,7 +355,32 @@
 				{#if children}
 					{@render children()}
 				{/if}
-				{#if page.route.id === '/tabs/home' || page.route.id === '/tabs/space'}
+				{#if page.route.id === '/tabs/home'}
+					<a href="/settings">
+						<Bolt class="size-7" />
+					</a>
+				{:else if page.route.id === '/tabs/space'}
+					{#if localSpaces.current.length > 0}
+						{#if home.spaceDelete}
+							<CircleX
+								class="size-7"
+								onclick={() => {
+									home.spaceDelete = false;
+								}}
+							/>
+						{:else}
+							<Trash
+								class="size-7"
+								onclick={() => {
+									home.spaceDelete = true;
+									toast('Select Spaces to Delete', {
+										style: 'border-radius: 200px; background: #333; color: #fff;',
+										duration: 2000
+									});
+								}}
+							/>
+						{/if}
+					{/if}
 					<a href="/settings">
 						<Bolt class="size-7" />
 					</a>
@@ -472,36 +493,95 @@
 					>
 				</header>
 				<hr class="hr" />
-				<div class="input-group grid-cols-auto">
+				<div class="input-group grid-cols-auto relative">
 					<input
 						form="input[]"
 						class="ig-input bg-primary-500/20"
 						bind:value={sharedItem.title}
 						type="text"
 						required
-						placeholder="Title"
+						placeholder="Title *"
 					/>
+					{#if sharedItem.title.length > 0}
+						<X
+							onclick={() => {
+								sharedItem.title = '';
+							}}
+							class=" text-surface-200/30 absolute right-0 m-2 "
+						/>
+					{:else}
+						<Info
+							onclick={() => {
+								toast('Required to add a Title', {
+									icon: '⚠️',
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 2000
+								});
+							}}
+							class=" text-primary-200/30 absolute right-0 m-2 "
+						/>
+					{/if}
 				</div>
 
-				<textarea
-					class="input-group bg-primary-500/20 ig-input w-full"
-					rows="3"
-					placeholder="Description."
-					bind:value={sharedItem.text}
-				></textarea>
+				<div class="relative">
+					{#if sharedItem.text.length > 0}
+						<X
+							onclick={() => {
+								sharedItem.text = '';
+							}}
+							class=" text-surface-200/30 absolute right-0 m-2 "
+						/>
+					{:else}
+						<Info
+							onclick={() => {
+								toast('Required to add a Description', {
+									icon: '⚠️',
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 2000
+								});
+							}}
+							class=" text-primary-200/30 absolute right-0 m-2 "
+						/>
+					{/if}
+					<textarea
+						class="input-group bg-primary-500/20 ig-input w-full"
+						rows="3"
+						placeholder="Description *"
+						bind:value={sharedItem.text}
+					></textarea>
+				</div>
 				{@render Fileupload()}
 
 				<span class="flex justify-center">OR</span>
 
-				<div class="input-group bg-primary-500/20 grid-cols-[auto_1fr]">
-					<div class="ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
+				<div class="input-group bg-primary-500/20 relative grid-cols-[auto_1fr]">
+					<div class=" ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
 					<input
 						class="ig-input"
 						bind:value={url}
 						oninput={handleSubmit}
 						type="url"
-						placeholder="www.example.com"
+						placeholder="https://www.example.com"
 					/>
+					{#if url.length > 0}
+						<X
+							onclick={() => {
+								url = '';
+							}}
+							class=" text-surface-200/30 absolute right-0 m-2 "
+						/>
+					{:else}
+						<Info
+							onclick={() => {
+								toast('Required to add a Description', {
+									icon: '⚠️',
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 2000
+								});
+							}}
+							class=" text-primary-200/30 absolute right-0 m-2 "
+						/>
+					{/if}
 				</div>
 				<hr class="hr" />
 				{#if localSpaces.current.length > 0}
@@ -541,10 +621,13 @@
 				<article>
 					<button
 						type="submit"
-						disabled={loading && (sharedItem.title === '' && sharedItem.text === '')}
-						class="btn preset-filled w-full p-3"
+						disabled={loading ||
+							(url === '' && (sharedItem.title === '' || sharedItem.text === ''))}
+						class="btn {loading ||
+						(url === '' && (sharedItem.title === '' || sharedItem.text === ''))
+							? 'opacity-50'
+							: 'opacity-100'} preset-filled w-full p-3"
 						onclick={() => {
-							console.log(url);
 							if (url !== '' && ogData) {
 								if (ogData.image === '') {
 									sharedItem.img = noImageUrl;
@@ -552,11 +635,11 @@
 									// console.log(imageToBase64(ogData.image))
 									sharedItem.img = ogData.image;
 								}
-								if(ogData){
-									sharedItem.title = ogData.title;
-									sharedItem.text = ogData.description;
-									sharedItem.link = ogData.siteName;
-									sharedItem.url = url;
+								if (ogData) {
+									// sharedItem.title = ogData.title;
+									// sharedItem.text = ogData.description;
+									// sharedItem.link = ogData.siteName;
+									// sharedItem.url = url;
 									localItems.current.push(sharedItem);
 									addItemToSpace(sharedItem);
 									openPopup = false;
@@ -567,7 +650,7 @@
 										sharedItem.title =
 										sharedItem.url =
 											'';
-								}else {
+								} else {
 									toast.error('Error fetching OpenGraph data', {
 										style: 'border-radius: 200px; background: #333; color: #fff;',
 										duration: 1500
@@ -591,28 +674,26 @@
 									sharedItem.title =
 									sharedItem.url =
 										'';
-							} 
-							else if (url !== '') {
-								toast.error('Error fetching OpenGraph data try Again', {
+							} else if (url !== '') {
+								toast.error('Link invalid or "https://" missing', {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 2000
+								});
+							} else {
+								console.log('Important Fields Empty');
+								toast.error('Important fields are missing', {
 									style: 'border-radius: 200px; background: #333; color: #fff;',
 									duration: 1500
 								});
 							}
-							else  {
-								console.log('Important Fields Empty');
-								toast.error("Important fields are missing", {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-							} 
-						}}>
+						}}
+					>
 						{#if loading}
 							<CircleDashed class="size-8 animate-spin" />
 						{:else}
 							Add Item
 						{/if}
-						</button
-					>
+					</button>
 				</article>
 			</form>
 		{:else if page.route.id === '/tabs/space'}
@@ -755,6 +836,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
+		out:blur={{ duration: 300 }}
 		onclick={() => {
 			dropMenu = !dropMenu;
 		}}
@@ -766,7 +848,7 @@
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			transition:slide={{ duration: 150 }}
+			transition:slide|global
 			id="dropdownDots"
 			onclick={() => {
 				dropMenu = !dropMenu;

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { fade, fly, scale, blur } from 'svelte/transition';
+	import { fade, fly, scale, blur, slide } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import Cards from '$lib/components/Cards.svelte';
 	import { home, localItems } from '$lib/shared.svelte';
@@ -8,9 +8,9 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<div class="relative z-50 mb-10 grid space-y-6">
-	<div in:scale>
-		<div in:fly={{ y: 70 }} class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
+<div class="relative z-1 mb-10 grid space-y-6">
+	<div in:scale|global>
+		<div class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
 			{#each [...localItems.current].reverse() as _}
 				<Cards
 					img={_.img}
@@ -25,20 +25,18 @@
 			{/each}
 		</div>
 	</div>
-	<button
-		in:fly={{ delay: 10, y: 100 }}
-		type="button"
-		class=" btn-icon bg-primary-950/70 fixed bottom-0 left-0 z-20 h-10 w-full rounded-xs backdrop-blur-xs"
-		onclick={() => {
-			history.back();
-		}}
-	>
-		<span class="bottom-0 flex flex-1/2 items-center gap-[28%]">
-			<ArrowLeft class="size-7" />
-			<h3 class="h4">Go Back</h3>
-		</span>
-	</button>
 </div>
+
+<button
+	in:slide
+	onclick={() => {
+		history.back();
+	}}
+	class="btn bg-primary-800/50 fixed bottom-2 z-9 h-10 w-[92%] rounded-lg"
+>
+	<ArrowLeft />
+	Go Back
+</button>
 
 <div
 	in:fly={{ delay: 0, x: -100 }}
@@ -50,4 +48,3 @@
 		<p class="text-sm font-bold">Nothing Saved yet</p>
 	{/if}
 </div>
-

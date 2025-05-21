@@ -58,9 +58,10 @@ export async function fetchOpenGraphData(url: string): Promise<OpenGraphData> {
 			}
 		}
 		if (!ogData.image) {
+			// const imgTag = root.querySelector('meta[name="image"]');
 			const imgTag = root.querySelector('meta[name="image"]');
 			if (imgTag) {
-				ogData.image = NoImageURL;
+				ogData.image = imgTag.getAttribute('content') || NoImageURL;
 			}
 		}
 
