@@ -19,7 +19,6 @@
 	import { goto } from '$app/navigation';
 	import toast from 'svelte-french-toast';
 	import { Info } from '@lucide/svelte';
-	import LongPressMenu from '$lib/components/LongPressMenu.svelte';
 
 	let { data }: { data: PageData } = $props();
 	let disturb = $state(false);
@@ -58,7 +57,6 @@
 								></Switch>
 							</div>
 							<hr class="hr" />
-							<LongPressMenu />
 						</section>
 					</div>
 				{/snippet}
