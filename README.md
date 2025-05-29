@@ -49,7 +49,7 @@ pnpm dev
 
 ## 🌍 Live Demo
 
-> 🔗 [Deployed version of GloveBox](https://glovebox.pages.dev)
+> 🔗 [GloveBox Web App](https://glovebox.appmy.workers.dev)
 
 ---
 
