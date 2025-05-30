@@ -5,7 +5,7 @@
 	import { ArrowLeftIcon, ArrowUpRightFromSquare, Link2 } from 'lucide-svelte';
 	import { blur } from 'svelte/transition';
     let links = {
-        website : 'https://fyiimysf.pages.dev',
+        repo : 'https://github.com/fyiimysf/GloveBox',
         github : 'https://github.com/fyiimysf',
         linkedIn : 'https://www.linkedin.com/in/yousaf-mohammad',
         insta : 'https://www.instagram.com/uceph.em/',
@@ -19,18 +19,18 @@
 	<div
 		class="card flex flex-col items-center justify-between gap-1 rounded-xl p-3"
 	>
-		<img src={avatar} alt="pfp" class="size-26 rounded-full shadow-xl" />
+	<img src={avatar} alt="pfp" class="size-26 rounded-full shadow-xl" />
+	This app was created by <a target="_blank" href="https://fyiimysf.pages.dev" class='text-primary-300' >Mohammad Yousaf</a>
 		<p class="card flex items-center justify-stretch rounded-xl p-2 text-justify">
 			Glove Box is a URL stashing app that allows you to save and organize your favorite links. You
 			can categorize your links for better organization and quick access.
 		</p>
-		This app was created by <a target="_blank" href="{links.website}" class='text-primary-300' >Mohammad Yousaf</a>
 	</div>
     
-	<a href='{links.website}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
+	<a href='{links.repo}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
 		<div class="flex gap-3">
 			<Link2 />
-			<p>Website</p>
+			<p>Project Repo</p>
 		</div>
 		<ArrowUpRightFromSquare />
 	</a>

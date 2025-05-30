@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { fade, fly, scale, slide, blur } from 'svelte/transition';
-	import type { PageData } from './$types';
 	import Cards from '$lib/components/Cards.svelte';
 	import { cardPage, home, localItems, localSpaces, spaceview } from '$lib/shared.svelte';
 	import { ArrowLeft, CircleSlash } from 'lucide-svelte';
-	import { onMount } from 'svelte';
 </script>
 
 {#each spaceview.viewItems as itemCard}
-	<div in:blur|global class="just relative flex space-y-6">
+	<div in:blur|global class="relative z-1 mb-10 grid space-y-6">
 		<div>
 			<div
-				in:fly={{ y: 70 }}
+				in:fly|global
 				class="grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-6 p-2"
 			>
 				<button

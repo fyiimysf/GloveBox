@@ -211,7 +211,7 @@
 
 <div
 	in:fly={{ delay: 0, x: -100 }}
-	class="fixed inset-0 z-0 flex flex-col items-center justify-center gap-1 text-gray-300/30"
+	class="fixed inset-0 z-0 flex flex-col items-center justify-center gap-2 text-gray-300/30"
 >
 	{#if localItems.current.length < 1}
 		<CircleMinus class="size-28" />
@@ -221,10 +221,10 @@
 </div>
 <div
 	in:blur={{ delay: 100 }}
-	class="fixed inset-0 bottom-20 z-0 flex flex-col items-center justify-end text-gray-600"
+	class="fixed inset-0 bottom-20 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
 >
 	{#if localItems.current.length < 1}
-		<p>Add Item</p>
-		<ArrowDown class="size-10" />
+		<p class="animate-bounce">Add Item</p>
+		<ArrowDown class="size-10 animate-bounce" />
 	{/if}
 </div>

@@ -42,7 +42,7 @@
 			dropMenu = false;
 			spaceMenu = false;
 		}}
-		class="fixed inset-0 z-10 bg-black/30"
+		class="fixed inset-0 z-1 bg-black/30 backdrop-blur-[1px]"
 	></div>
 {/if}
 {#if dropMenu}
@@ -58,7 +58,7 @@
 	>
 		{#if data.url !== ''}
 			<a target="_blank" href={data.url} class="">
-				<div class="block py-1 text-xs text-yellow-300">
+				<div class="block py-2 text-xs text-yellow-300">
 					<span class="flex justify-between">
 						Open Link
 						<Link />
@@ -175,7 +175,7 @@
 		<div
 			transition:slide={{ duration: 150 }}
 			id="dropdownDots"
-			class="bg-primary-950/70 h-28 w-40 overflow-y-auto rounded-lg font-bold shadow-xs backdrop-blur-lg"
+			class="bg-primary-950/70 absolute z-100 h-28 w-40 overflow-y-auto rounded-lg font-bold shadow-xs backdrop-blur-lg"
 		>
 			{#each [...localSpaces.current].reverse() as item, index}
 				<div

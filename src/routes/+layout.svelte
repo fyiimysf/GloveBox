@@ -3,10 +3,10 @@
 
 	let { children } = $props();
 
-	import { AppBar, FileUpload, Navigation } from '@skeletonlabs/skeleton-svelte';
+	import { AppBar, Avatar, FileUpload, Navigation } from '@skeletonlabs/skeleton-svelte';
 	import toast, { Toaster } from 'svelte-french-toast';
 	import BlobImg from '$lib/assets/blob-scene.svg';
-	import appIcon from '$lib/assets/icon-512.png';
+	import appIcon from '$lib/assets/launch-icon.webp';
 	// Icons
 	import { page } from '$app/state';
 	import {
@@ -27,7 +27,13 @@
 		Trash,
 		CircleMinus,
 		ChevronUp,
-		ChevronDown
+		ChevronDown,
+		Github,
+		Link2,
+		User,
+		CircleUser,
+		CircleDotDashed,
+		CircleOff
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 	import {
@@ -38,7 +44,8 @@
 		localSpaces,
 		cardPage,
 		first,
-		spaceview
+		spaceview,
+		data_theme
 	} from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
@@ -55,8 +62,12 @@
 		}
 	});
 	$effect(() => {
+		document.documentElement.setAttribute('data-theme', data_theme.current.value);
 		// console.log('Navigation value:', home.pageTitle);
 		// console.log(home.homeLayout);
+		if (page.route.id == '/tabs/space') {
+			home.spaceDelete = false;
+		}
 	});
 
 	function generatePreview(event: any) {
@@ -133,6 +144,7 @@
 
 	//DropDown
 	let dropMenu = $state(false);
+	let spaceMenu = $state(false);
 </script>
 
 <div class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
@@ -172,19 +184,20 @@
 								src={appIcon}
 								transition:blur={{ delay: 200 }}
 								alt="GloveBox"
-								class="shadow-primary-200/50 size-25 rounded-4xl"
+								class="shadow-primary-200/50 -mb-10"
 							/>
-							<h2 transition:blur={{ delay: 300 }} class="h3">Welcome to</h2>
-							<h2 transition:blur={{ delay: 300 }} class="h2">GloveBox</h2>
+							<h2 transition:slide={{ delay: 300 }} class="h3">Welcome to</h2>
+							<h2 transition:slide={{ delay: 300 }} class="h2">GloveBox</h2>
 							<button
-								transition:blur={{ delay: 400 }}
-								type="button"
-								aria-label="title"
-								class="btn preset-filled mt-5 w-60 rounded-full py-2 text-lg"
-								onclick={() => {
-									first.current = !first.current;
-								}}>Continue</button
+							transition:blur={{ delay: 400 }}
+							type="button"
+							aria-label="title"
+							class="btn preset-filled mt-5 w-60 rounded-full py-2 text-lg"
+							onclick={() => {
+								first.current = !first.current;
+							}}>Continue</button
 							>
+							<p transition:slide={{ delay: 100 }} class="p text-lg font-bold tracking-wider absolute flex bottom-10">URL organizer & stashing</p>
 						</span>
 					</div>
 				</div>
@@ -293,7 +306,7 @@
 					</center>
 				{:else if page.route.id === '/info'}
 					<center>
-						<h1 in:fade class="h1 font-bold">About</h1>
+						<h1 in:fade class="h1 font-bold">Glove Box</h1>
 					</center>
 				{:else if page.route.id === '/card'}
 					<center>
@@ -309,13 +322,23 @@
 			{/snippet}
 
 			{#snippet lead()}
-				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/card' || page.route.id === '/info' || page.route.id === '/tabs/space/spaceview'}
+				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/info' || page.route.id === '/tabs/space/spaceview'}
 					<ArrowLeft
 						onclick={() => {
 							history.back();
 						}}
 						class="size-7"
 					/>
+				{:else if page.route.id === '/card'}
+					{#if !dropMenu || spaceMenu}
+						<ArrowLeft
+							
+							onclick={() => {
+								history.back();
+							}}
+							class="size-7"
+						/>
+					{/if}
 				{:else if page.route.id === '/tabs/home'}
 					{#if !home.homeLayout}
 						<StretchHorizontal
@@ -388,19 +411,35 @@
 					<a href="/info">
 						<Info class="size-7" />
 					</a>
+				{:else if page.route.id === '/info'}
+					<a href="/info">
+						<CircleUser
+							class="size-7"
+							onclick={() => {
+								window.open('https://fyiimysf.pages.dev', '_blank');
+							}}
+						/>
+					</a>
 				{:else if page.route.id === '/card'}
-					<button
-						onclick={() => {
-							dropMenu = !dropMenu;
-						}}
-					>
-						{#if dropMenu}
+					<button>
+						{#if dropMenu || spaceMenu}
 							<div in:fly>
-								<X class="size-7" />
+								<X
+									class="size-7"
+									onclick={() => {
+										dropMenu = false;
+										spaceMenu = false;
+									}}
+								/>
 							</div>
 						{:else}
 							<div in:fly>
-								<MoreVertical class="size-7" />
+								<MoreVertical
+									class="size-7"
+									onclick={() => {
+										dropMenu = true;
+									}}
+								/>
 							</div>
 						{/if}
 					</button>
@@ -466,7 +505,7 @@
 				{/if}
 			{/snippet}
 		</AppBar>
-		{#if dropMenu}
+		{#if dropMenu || spaceMenu}
 			<div class="fixed top-15 right-4 z-12 flex justify-end">
 				{@render CardDropDown()}
 			</div>
@@ -832,13 +871,14 @@
 	</div>
 {/snippet}
 
-{#if dropMenu}
+{#if dropMenu || spaceMenu}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		out:blur={{ duration: 300 }}
 		onclick={() => {
-			dropMenu = !dropMenu;
+			dropMenu = false;
+			spaceMenu = false;
 		}}
 		class="fixed inset-0 z-9 bg-black/30 backdrop-blur-xs"
 	></div>
@@ -853,26 +893,86 @@
 			onclick={() => {
 				dropMenu = !dropMenu;
 			}}
-			class="bg-primary-950/70 w-50 divide-y divide-white rounded-lg font-bold shadow-sm outline backdrop-blur-lg"
+			class="bg-primary-950/80 w-50 divide-y divide-white rounded-lg font-bold shadow-sm outline backdrop-blur-lg"
 		>
-			{#if cardPage.url !== ''}
-				<a target="_blank" href={cardPage.url} class="py-1">
-					<div class="block px-4 py-1 text-yellow-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-						<span class="flex justify-between">
-							Open Link
-							<Link />
+			<div>
+				{#if cardPage.url !== ''}
+					<a target="_blank" href={cardPage.url} class="py-1">
+						<div class="block px-4 py-2 text-yellow-300 hover:bg-gray-100 dark:hover:bg-gray-600">
+							<span class="flex justify-between">
+								Open Link
+								<Link />
+							</span>
+						</div>
+					</a>
+				{/if}
+			</div>
+
+			{#each localSpaces.current as spaceObj}
+				{#each spaceObj.items as obj}
+					<div class="py-2">
+						{#if obj.title === cardPage.title}
+							<div class="px-4">
+								<span
+									onclick={() => {
+										spaceObj.items.forEach((item: any) => {
+											if (item.title === cardPage.title) {
+												let tempArr2 = spaceObj.items.filter(
+													(item: any) => item.title !== cardPage.title
+												);
+												spaceObj.items = tempArr2;
+											}
+										});
+										spaceview.viewItems.forEach((item: any) => {
+											if (item.title === cardPage.title) {
+												let tempArr3 = spaceview.viewItems.filter(
+													(item: any) => item.title !== cardPage.title
+												);
+												spaceview.viewItems = tempArr3;
+											}
+										});
+										toast.success('Item Deleted from ' + spaceObj.name, {
+											style: 'border-radius: 200px; background: #333; color: #fff;',
+											duration: 1500
+										});
+									}}
+									class="flex justify-between text-{spaceObj.clr}-400"
+								>
+									<p class="w-30 truncate">
+										Delete From <br />{spaceObj.name}
+									</p>
+									<CircleOff />
+								</span>
+							</div>
+						{/if}
+					</div>
+				{/each}
+			{/each}
+
+			{#if localSpaces.current.length > 0}
+				<div class="py-2">
+					<div class="block px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
+						<span
+							onclick={() => {
+								spaceMenu = true;
+
+								localSpaces.current.forEach((spc: any) => {
+									spc.items.forEach((item: any) => {
+										if (item.title === cardPage.title) {
+											let tempArr2 = spc.items.filter((item: any) => item.title !== cardPage.title);
+											spc.items = tempArr2;
+										}
+									});
+								});
+							}}
+							class="flex justify-between"
+						>
+							Add To Space
+							<CircleDashed />
 						</span>
 					</div>
-				</a>
-			{/if}
-			<div class="py-1">
-				<div class="block px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
-					<span class="flex justify-between">
-						Add To Space
-						<CircleDashed />
-					</span>
 				</div>
-			</div>
+			{/if}
 			<div
 				onclick={() => {
 					let tempArr = localItems.current.filter((item: any) => item.title !== cardPage.title);
@@ -893,7 +993,7 @@
 					});
 					history.back();
 				}}
-				class="py-1"
+				class="py-2"
 			>
 				<div class="block px-4 py-1 text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
 					<span class="flex justify-between">
@@ -904,4 +1004,51 @@
 			</div>
 		</div>
 	{/if}
+	{#if spaceMenu}
+		{@render AddtoSpace()}
+	{/if}
+	{#snippet AddtoSpace()}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="rounded-lg">
+			<div
+				transition:slide|global
+				id="dropdownDots"
+				class="bg-primary-950/70 absolute right-0 z-100 h-40 w-50 divide-y divide-white overflow-y-auto rounded-lg font-bold shadow-xs outline backdrop-blur-lg"
+			>
+				{#each [...localSpaces.current].reverse() as item, index}
+					<div
+						onclick={() => {
+							if (item.items.length < 1) {
+								item.items.push(cardPage);
+								toast.success('Item Added to ' + item.name, {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							} else {
+								let tempArr = item.items.filter((item: any) => item.title !== cardPage.title);
+								item.items = tempArr;
+								toast.success('Item Removed from ' + item.name, {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							}
+
+							spaceMenu = !spaceMenu;
+						}}
+						class="py-2"
+					>
+						<div class=" px-2 py-0.5 text-{item.clr}-400">
+							<span class="flex justify-between">
+								<p class="w-30 truncate">
+									{item.name}
+								</p>
+								<CircleDotDashed />
+							</span>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/snippet}
 {/snippet}

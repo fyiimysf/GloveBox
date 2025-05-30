@@ -69,7 +69,7 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class=" text-primary-400 absolute right-3 rounded-full bg-black/5 shadow-lg backdrop-blur-lg"
+					class=" text-primary-400 absolute right-2 top-2  rounded-full bg-black/5 shadow-lg backdrop-blur-lg"
 					><Link class="size-7 p-1" /></a
 				>
 			{/if}

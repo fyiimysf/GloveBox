@@ -14,10 +14,13 @@ export const handle: Handle = async ({ resolve, event }) => {
 			});
 		}
 	}
+	
 
+	// Resolve the request and append CORS headers
 	const response = await resolve(event);
 	if (event.url.pathname.startsWith('/api')) {
 		response.headers.append('Access-Control-Allow-Origin', `*`);
 	}
 	return response;
 };
+

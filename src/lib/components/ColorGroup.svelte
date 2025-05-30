@@ -12,6 +12,7 @@
 		name="align"
 		value={align}
 		indicatorBg="bg-{align}-400 "
+		indicatorText="text-surface-900"
 		onValueChange={(e) => {
 			align = e.value;
 			space.clr = e.value;

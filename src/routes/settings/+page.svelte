@@ -9,12 +9,21 @@
 		Settings,
 		DownloadCloud,
 		ArrowDownFromLine,
-		ArrowUpFromLine
+		ArrowUpFromLine,
+		Palette
 	} from 'lucide-svelte';
 	import type { PageData } from '../$types';
-	import { Accordion, Switch } from '@skeletonlabs/skeleton-svelte';
+	import { Accordion, Combobox, Switch } from '@skeletonlabs/skeleton-svelte';
 	import { fade, fly, slide } from 'svelte/transition';
-	import { first, localItems, localSpaces } from '$lib/shared.svelte';
+	import {
+		comboboxData,
+		data_theme,
+		first,
+		home,
+		localItems,
+		localSpaces,
+		selectedTheme
+	} from '$lib/shared.svelte';
 	import { redirect } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 	import toast from 'svelte-french-toast';
@@ -30,6 +39,28 @@
 		localItems.current = [];
 		localSpaces.current = [];
 		first.current = true;
+		data_theme.current = { label: 'Mona', value: 'mona', color: 'text-purple-500' };
+		goto('/tabs/home')
+		home.pageTitle = 'Home'
+	}
+	const colors = [
+	'red',
+	'blue',
+	'green',
+	
+	'red',
+	'blue',
+	'green',
+	
+	'red',
+	'blue',
+	'green',
+	
+	];
+	let color = $state(colors[0]);
+
+	function setColor(selectedColor: string) {
+		color = selectedColor;
 	}
 </script>
 
@@ -39,7 +70,7 @@
 >
 	<div class="card bg-primary-900/20 border-surface-200-800 w-full border-[1px] p-4">
 		<Accordion {value} onValueChange={(e) => (value = e.value)} multiple>
-			<Accordion.Item value="1">
+			<!-- <Accordion.Item value="0">
 				{#snippet lead()}<Settings size={24} />{/snippet}
 				{#snippet control()}
 					General
@@ -60,8 +91,76 @@
 						</section>
 					</div>
 				{/snippet}
+			</Accordion.Item> -->
+
+			<Accordion.Item value="1">
+				{#snippet lead()}<Palette size={24} />{/snippet}
+				{#snippet control()}
+					Themes
+					<p class="text-xs text-gray-400">select a theme you want to apply.</p>
+				{/snippet}
+				{#snippet panel()}
+					<div class="grid gap-2 grid-cols-3 ">
+						<!-- Loop through the available colors -->
+						{#each comboboxData as c}
+							<!-- On selection, set the color state, dynamically update classes -->
+							<button
+								class={`chip h-12 text-lg capitalize bg-primary-500 ${data_theme.current.value === c.value ? 'preset-filled' : 'preset-tonal'}`}
+								onclick={() => {
+									data_theme.current = c;
+									document.documentElement.setAttribute('data-theme', c.value);
+								}}
+							>
+								<span>{c.label}</span>
+							</button>
+							{/each}
+						</div>
+						<button
+							class={`chip w-full mt-2 h-12 text-lg capitalize bg-primary-500 ${data_theme.current.value === 'none' ? 'preset-filled' : 'preset-tonal'}`}
+							onclick={() => {
+								data_theme.current.value = 'none';
+								document.documentElement.setAttribute('data-theme', data_theme.current.value);
+							}}
+						>
+							<span>None</span>
+						</button>
+				{/snippet}
 			</Accordion.Item>
 
+			<!-- <hr class="hr" />
+			<Accordion.Item value="1">
+				{#snippet lead()}<Palette size={24} />{/snippet}
+				{#snippet control()}
+					Theme
+					<p class="text-xs text-gray-400">select a theme you want to apply.</p>
+				{/snippet}
+				{#snippet panel()}
+					<div class="flex w-fit">
+						<Combobox
+							openOnKeyPress={false}
+							allowCustomValue={false}
+							defaultValue={selectedTheme.selected}
+							data={comboboxData}
+							value={[selectedTheme.theme.value]}
+							onValueChange={(e) => {
+								selectedTheme.selected = e.value;
+								selectedTheme.theme =
+									comboboxData.find((item) => item.value == e.value) || comboboxData[0];
+								document.documentElement.setAttribute('data-theme', selectedTheme.theme.value);
+								data_theme.current = selectedTheme.theme;
+							}}
+							placeholder={data_theme.current.label}
+						>
+							{#snippet item(item)}
+								<div class="flex justify-between space-x-2">
+									<span>{item.label}</span>
+									<span><Palette class={item.color} /></span>
+								</div>
+							{/snippet}
+						</Combobox>
+					</div>
+				{/snippet}
+			</Accordion.Item> -->
 			<hr class="hr" />
 			<Accordion.Item value="2" classes="text-green-400">
 				{#snippet lead()}<DownloadCloud class="" size={24} />{/snippet}
@@ -169,17 +268,17 @@
 	onclick={() => {
 		history.back();
 	}}
-	class="btn bg-primary-800/50 fixed bottom-3 z-10 h-12 w-[94%] rounded-lg"
+	class="btn bg-primary-950/70 fixed bottom-2 z-9 h-10 w-[94%] rounded-lg backdrop-blur"
 >
 	<ArrowLeft />
 	Go Back
 </button>
 
 {#snippet FormatDialogue()}
-	<div class="card bg-primary-300/5 m-4 w-full max-w-md px-4 py-8 text-center">
+	<div class="card m-4 w-full max-w-md px-4 py-8 text-center">
 		<div class="flex flex-col items-center justify-center gap-2">
-			<p class="text-center text-xl font-bold">Delete everything?</p>
-			<p class="text-center font-mono text-xs">can't be undone</p>
+			<p class="text-center text-2xl font-bold">Delete everything?</p>
+			<p class="text-md pb-4 text-center font-mono">can't be undone</p>
 			<div class="flex w-full items-center justify-around gap-4">
 				<button
 					onclick={() => {
@@ -188,18 +287,18 @@
 						goto('/tabs/home');
 						toast('Everything Wiped!', {
 							icon: '⚠️',
-							style: 'border-radius: 200px; background: #333; color: #fff;'
+							style: 'border-radius: 200px; background: #4a3342; color: #fff;'
 						});
 					}}
-					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 text-lg font-bold text-red-400"
+					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 font-mono text-lg font-bold text-red-400"
 					>Yes, Im Sure</button
 				>
 				<button
 					onclick={() => {
 						formatDialogue = false;
 					}}
-					class="btn btn-secondary w-full bg-green-300/20 p-2 text-lg font-bold text-green-300"
-					>No, I dont</button
+					class="btn btn-secondary w-full bg-green-300/20 p-2 font-mono text-lg font-bold text-green-300"
+					>No, dont</button
 				>
 			</div>
 		</div>

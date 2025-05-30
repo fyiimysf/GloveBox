@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import Cards from '$lib/components/Cards.svelte';
 	import { cardPage, home, localSpaces, space, spaceview } from '$lib/shared.svelte';
-	import { Currency } from '@lucide/svelte';
+	import { CircleX, Currency } from '@lucide/svelte';
 	import { Segment } from '@skeletonlabs/skeleton-svelte';
 	import {
 		ArrowDown,
@@ -18,6 +18,7 @@
 	$effect(() => {
 		// $inspect(spaceview);
 	});
+
 	function emptyToast() {
 		toast(spaceview.pageTitle + ' is Empty', {
 			style: 'border-radius: 200px; background: #333; color: #fff;',
@@ -68,11 +69,8 @@
 						<p class="w-60 truncate pl-3 text-sm opacity-100">{spaceItem.desc}</p>
 					</span>
 					<div class="flex pt-2.5 pr-3">
-						{#if spaceItem.items.length > 0}
-							<p class="text-lg font-bold">{spaceItem.items.length}</p>
-							<ChevronRight class="size-8" />
-						{:else if home.spaceDelete}
-							<X
+						{#if home.spaceDelete}
+							<CircleX
 								class="size-8 text-red-400"
 								onclick={() => {
 									let tempArr = localSpaces.current.filter(
@@ -87,6 +85,9 @@
 									});
 								}}
 							/>
+						{:else if spaceItem.items.length > 0}
+							<p class="text-lg font-bold">{spaceItem.items.length}</p>
+							<ChevronRight class="size-8" />
 						{:else}
 							<CircleMinus class="size-8 opacity-40" />
 						{/if}
@@ -174,7 +175,7 @@
 	in:fly={{ delay: 0, x: 100 }}
 	class="fixed {localSpaces.current.length < 1
 		? 'inset-0'
-		: ''}  z-0 flex flex-col items-center justify-center gap-1 text-gray-300/30"
+		: ''}  z-0 flex flex-col items-center justify-center gap-2 text-gray-300/30"
 >
 	{#if localSpaces.current.length < 1}
 		<CircleMinus class="size-28" />
@@ -187,11 +188,11 @@
 	in:blur={{ delay: 100 }}
 	class="fixed {localSpaces.current.length < 1
 		? 'inset-0'
-		: ''} bottom-20 z-0 flex flex-col items-center justify-end text-gray-600"
+		: ''} bottom-20 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
 >
 	{#if localSpaces.current.length < 1}
-		<p>Add a Space</p>
-		<ArrowDown class="size-10" />
+		<p class="animate-bounce">Add a Space</p>
+		<ArrowDown class="size-10 animate-bounce" />
 	{/if}
 </div>
 

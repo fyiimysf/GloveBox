@@ -2,6 +2,8 @@
 	"id": "glove-box",
 	"short_name": "GloveBox",
 	"name": "GloveBox",
+	"author": "fyiimysf",
+	"git_repository": "https://github.com/fyiimysf/GloveBox",
 	"start_url": "/tabs/home",
 	"version": "1.0.0",
 	"manifest_version": 2,
@@ -64,17 +66,24 @@
 		}
 	],"shortcuts": [
 		{
-			"name": "Open Home Page",
+			"name": "Home",
 			"short_name": "Home",
 			"description": "Home page of the app",
 			"url": "/tabs/home",
 			"icons": [{ "src": "/icons/web/icon-192.png", "sizes": "192x192" }]
 		},
 		{
-			"name": "Open Saved Pages",
-			"short_name": "Saved page",
-			"description": "Saved pages of the app",
-			"url": "/tab/home/saved",
+			"name": "Space",
+			"short_name": "Space tab",
+			"description": "Spaces tab of the app",
+			"url": "/tab/home/space",
+			"icons": [{ "src": "/icons/web/icon-192.png", "sizes": "192x192" }]
+		},
+		{
+			"name": "Settings",
+			"short_name": "Settings",
+			"description": "Spaces tab of the app",
+			"url": "/settings",
 			"icons": [{ "src": "/icons/web/icon-192.png", "sizes": "192x192" }]
 		}
 	],
@@ -82,6 +91,12 @@
 	"background_color": "#8367D6",
 	"display": "standalone",
 	"scope": "/",
-	"theme_color": "#8367D6",
+	"theme_color": "#381e60",
+	"orientation": "portrait-primary",
+	"display_override": [
+		"fullscreen",
+		"standalone",
+		"minimal-ui"
+	],
 	"description": "Glove Box is a URL stashing app that allows you to save and organize your favorite links."
 }

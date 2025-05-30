@@ -20,3 +20,9 @@ export interface Space {
 	desc: string;
 	items: [];
 }
+
+export interface ComboboxData {
+    label: string;
+    value: string;
+    color: string;
+  }
