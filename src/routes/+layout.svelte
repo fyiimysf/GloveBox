@@ -33,7 +33,8 @@
 		User,
 		CircleUser,
 		CircleDotDashed,
-		CircleOff
+		CircleOff,
+		Clipboard
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 	import {
@@ -189,15 +190,20 @@
 							<h2 transition:slide={{ delay: 300 }} class="h3">Welcome to</h2>
 							<h2 transition:slide={{ delay: 300 }} class="h2">GloveBox</h2>
 							<button
-							transition:blur={{ delay: 400 }}
-							type="button"
-							aria-label="title"
-							class="btn preset-filled mt-5 w-60 rounded-full py-2 text-lg"
-							onclick={() => {
-								first.current = !first.current;
-							}}>Continue</button
+								transition:blur={{ delay: 400 }}
+								type="button"
+								aria-label="title"
+								class="btn preset-filled mt-5 w-60 rounded-full py-2 text-lg"
+								onclick={() => {
+									first.current = !first.current;
+								}}>Continue</button
 							>
-							<p transition:slide={{ delay: 100 }} class="p text-lg font-bold tracking-wider absolute flex bottom-10">URL organizer & stashing</p>
+							<p
+								transition:slide={{ delay: 100 }}
+								class="p absolute bottom-10 flex text-lg font-bold tracking-wider"
+							>
+								URL organizer & stashing
+							</p>
 						</span>
 					</div>
 				</div>
@@ -332,7 +338,6 @@
 				{:else if page.route.id === '/card'}
 					{#if !dropMenu || spaceMenu}
 						<ArrowLeft
-							
 							onclick={() => {
 								history.back();
 							}}
@@ -535,7 +540,7 @@
 				<div class="input-group grid-cols-auto relative">
 					<input
 						form="input[]"
-						class="ig-input bg-primary-500/20"
+						class="ig-input overflow-x-auto bg-primary-500/20"
 						bind:value={sharedItem.title}
 						type="text"
 						required
@@ -546,7 +551,7 @@
 							onclick={() => {
 								sharedItem.title = '';
 							}}
-							class=" text-surface-200/30 absolute right-0 m-2 "
+							class=" text-surface-200/30 bg-surface-900/80 rounded-full absolute right-0 m-2 "
 						/>
 					{:else}
 						<Info
@@ -568,7 +573,7 @@
 							onclick={() => {
 								sharedItem.text = '';
 							}}
-							class=" text-surface-200/30 absolute right-0 m-2 "
+							class=" text-surface-200/30 bg-surface-900/80 rounded-full absolute right-0 m-2 "
 						/>
 					{:else}
 						<Info
@@ -583,7 +588,7 @@
 						/>
 					{/if}
 					<textarea
-						class="input-group bg-primary-500/20 ig-input w-full"
+						class="input-group overflow-y-auto bg-primary-500/20 ig-input w-full"
 						rows="3"
 						placeholder="Description *"
 						bind:value={sharedItem.text}
@@ -594,7 +599,14 @@
 				<span class="flex justify-center">OR</span>
 
 				<div class="input-group bg-primary-500/20 relative grid-cols-[auto_1fr]">
-					<div class=" ig-cell preset-tonal w-fit"><Link class="h-4 w-4" /></div>
+					<div class=" ig-cell preset-tonal w-fit">
+						<Link
+							class="h-4 w-4"
+							onclick={() => {
+								url = 'https://';
+							}}
+						/>
+					</div>
 					<input
 						class="ig-input"
 						bind:value={url}
@@ -607,12 +619,12 @@
 							onclick={() => {
 								url = '';
 							}}
-							class=" text-surface-200/30 absolute right-0 m-2 "
+							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
 						/>
 					{:else}
 						<Info
 							onclick={() => {
-								toast('Required to add a Description', {
+								toast('Required to add a URL', {
 									icon: '⚠️',
 									style: 'border-radius: 200px; background: #333; color: #fff;',
 									duration: 2000
@@ -620,11 +632,28 @@
 							}}
 							class=" text-primary-200/30 absolute right-0 m-2 "
 						/>
+						<Clipboard
+							onclick={() => {
+								navigator.clipboard
+									.readText()
+									.then((text) => {
+										url = text;
+										handleSubmit()
+									})
+									.catch((err) => {
+										console.error('Failed to read clipboard: ', err);
+									});
+							}}
+							class=" text-primary-200/30 absolute right-7 m-2 "
+						/>
 					{/if}
 				</div>
 				<hr class="hr" />
 				{#if localSpaces.current.length > 0}
-					<p class="text-sm">Assign a Space</p>
+					<div class="flex flex-row gap-1">
+						<p class="text-sm">Assign a Space </p>
+						<p class="text-xs text-error-300">( + will discard data entered)</p>
+					</div>
 					<div class="flex gap-2 overflow-auto pb-2">
 						{#each localSpaces.current as obj}
 							{#if obj.name === chipName}

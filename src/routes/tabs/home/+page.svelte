@@ -112,9 +112,11 @@
 						target="_blank"
 						class="  absolute right-3 mt-2 rounded-full bg-black/30 text-white backdrop-blur"
 						><Link class="text-primary-200 size-7 p-1" /></a
+						
 					>
 				{/if}
-				<a href="/card">
+				<a onclick={() => CardPage(item.title, item.img, item.link, item.text, item.date, item.url)}
+					href="/card">
 					<header>
 						<Image
 							src={img}

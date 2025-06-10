@@ -20,7 +20,7 @@
 <!-- svelte-ignore a11y_consider_explicit_label -->
 <button
 	id="dropdownMenuIconButton"
-	class=" rounded-full bg-black/30 p-0.5 backdrop-blur"
+	class=" rounded-full bg-black/30 p-1 backdrop-blur"
 	type="button"
 	onclick={() => {
 		dropMenu = !dropMenu;
@@ -70,8 +70,8 @@
 		{#if localSpaces.current.length > 0}
 			{#each localSpaces.current as spaceObj}
 				{#each spaceObj.items as obj}
-					<div class="py-1">
-						{#if obj.title === data.title}
+				{#if obj.title === data.title}
+				<div class="py-1">
 							<div class="block py-1">
 								<span
 									onclick={() => {
@@ -104,8 +104,8 @@
 									<CircleOff />
 								</span>
 							</div>
+						</div>
 						{/if}
-					</div>
 				{/each}
 			{/each}
 			{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
@@ -180,20 +180,21 @@
 			{#each [...localSpaces.current].reverse() as item, index}
 				<div
 					onclick={() => {
-						if (item.items.length < 1) {
-							item.items.push(data);
-							toast.success('Item Added to ' + item.name, {
-								style: 'border-radius: 200px; background: #333; color: #fff;',
-								duration: 1500
-							});
-						} else {
-							let tempArr = item.items.filter((item: any) => item.title !== data.title);
-							item.items = tempArr;
-							toast.success('Item Removed from ' + item.name, {
-								style: 'border-radius: 200px; background: #333; color: #fff;',
-								duration: 1500
-							});
-						}
+						console.log(item.items.length);
+						item.items.push(data);
+						toast.success('Item Added to ' + item.name, {
+							style: 'border-radius: 200px; background: #333; color: #fff;',
+							duration: 1500
+						});
+						// if (item.items.length <= 0) {
+						// } else {
+						// 	let tempArr = item.items.filter((item: any) => item.title !== data.title);
+						// 	item.items = tempArr;
+						// 	toast.success('Item Removed from ' + item.name, {
+						// 		style: 'border-radius: 200px; background: #333; color: #fff;',
+						// 		duration: 1500
+						// 	});
+						// }
 
 						spaceMenu = !spaceMenu;
 					}}

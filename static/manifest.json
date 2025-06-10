@@ -94,9 +94,7 @@
 	"theme_color": "#381e60",
 	"orientation": "portrait-primary",
 	"display_override": [
-		"fullscreen",
-		"standalone",
-		"minimal-ui"
+		"standalone"		
 	],
 	"description": "Glove Box is a URL stashing app that allows you to save and organize your favorite links."
 }

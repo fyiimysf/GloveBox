@@ -132,7 +132,7 @@
 										: spaceItem.clr === 'blue'
 											? 'bg-blue-400/30 '
 											: spaceItem.clr === 'yellow'
-												? 'bg-yellow-400/30 '
+												? 'bg-yellow-400/30'
 												: spaceItem.clr === 'orange'
 													? 'bg-orange-400/30 '
 													: spaceItem.clr === 'pink'

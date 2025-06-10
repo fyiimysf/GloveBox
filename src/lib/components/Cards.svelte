@@ -57,7 +57,7 @@
 		// });
 		CardPage(item.title, item.img, item.link, item.text, item.date, item.url);
 	}}
-	class=" card divide-surface-200-800 justify-start overflow-hidden"
+	class=" card divide-surface-200-800 overflow-hidden "
 >
 	{#if full}
 		<div in:blur class=" bg-surface-900 shadow-lg">
@@ -95,15 +95,15 @@
 				<div>
 					<p class="p">{h1}</p>
 				</div>
-				<small class="overflow-hidden opacity-60">{p}</small>
+				<small class="overflow-hidden opacity-60 justify-start">{p}</small>
 			</article>
-			<footer class=" flex items-center justify-between px-3 py-1">
+			<footer class="bg-black/10 flex items-center justify-between px-3 py-1">
 				<small class="text-justify opacity-60">{fL}</small>
 				<small class="opacity-60">On {fR}</small>
 			</footer>
 		</div>
 	{:else}
-		<div in:blur class="card card-hover relative h-27 overflow-hidden rounded-xl shadow-lg">
+		<div in:blur class="card relative h-27 overflow-hidden rounded-xl shadow-lg">
 			{#if page.route.id === 'tabs/space'}
 				<div class="absolute z-100 rounded-full shadow-lg">
 					<DropDown data={item} />
@@ -113,7 +113,7 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="  text-primary-500 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
+						class=" text-primary-500 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
 						><Link class=" size-6 p-1" /></a
 					>
 				{/if}
@@ -129,7 +129,7 @@
 				}}
 			/>
 
-			<article class="relative bottom-8 rounded-b-xl bg-black/30 p-1 backdrop-blur-sm">
+			<article class="relative bottom-8 rounded-b-xl bg-primary-900/0 p-1 backdrop-blur-sm">
 				<span class="-space-y-2">
 					<p class="p truncate px-1">{h1}</p>
 					<!-- <small class="w-fit truncate rounded-lg bg-black/20 px-1 opacity-60">{fL}</small> -->

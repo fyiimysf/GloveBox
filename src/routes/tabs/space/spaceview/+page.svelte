@@ -5,14 +5,14 @@
 	import { ArrowLeft, CircleSlash } from 'lucide-svelte';
 </script>
 
-{#each spaceview.viewItems as itemCard}
-	<div in:blur|global class="relative z-1 mb-10 grid space-y-6">
-		<div>
-			<div
-				in:fly|global
-				class="grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-6 p-2"
-			>
+<div in:blur|global class="relative  z-1">
+	<div
+	in:fly|global
+	class="grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1 '}"
+	>
+	{#each [...spaceview.viewItems].reverse() as itemCard}
 				<button
+					class="{home.spaceviewLayout ? '' : 'm-1'}"
 					onclick={() => {
 						cardPage.title = itemCard.title;
 						cardPage.img = itemCard.img;
@@ -32,12 +32,13 @@
 						item={itemCard}
 					/>
 				</button>
-
-				<br />
+				{#if home.spaceviewLayout}
+					<br/>
+				{/if}
+				{/each}
 			</div>
 		</div>
-	</div>
-{/each}
+		<br/>
 
 {#if spaceview.viewItems.length < 1}
 	<div
@@ -54,7 +55,7 @@
 	onclick={() => {
 		history.back();
 	}}
-	class="btn bg-primary-800/50 fixed bottom-3 z-10 h-10 w-[94%] rounded-lg"
+	class="btn bg-primary-900/60 border-2 border-primary-900  fixed bottom-3 z-10 h-10 w-[94%] rounded-lg backdrop-blur"
 >
 	<ArrowLeft />
 	Go Back
