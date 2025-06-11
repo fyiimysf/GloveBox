@@ -70,8 +70,8 @@
 		{#if localSpaces.current.length > 0}
 			{#each localSpaces.current as spaceObj}
 				{#each spaceObj.items as obj}
-				{#if obj.title === data.title}
-				<div class="py-1">
+					{#if obj.title === data.title}
+						<div class="py-1">
 							<div class="block py-1">
 								<span
 									onclick={() => {
@@ -105,7 +105,7 @@
 								</span>
 							</div>
 						</div>
-						{/if}
+					{/if}
 				{/each}
 			{/each}
 			{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}

@@ -10,7 +10,8 @@
 		DownloadCloud,
 		ArrowDownFromLine,
 		ArrowUpFromLine,
-		Palette
+		Palette,
+		StickerIcon
 	} from 'lucide-svelte';
 	import type { PageData } from '../$types';
 	import { Accordion, Combobox, Switch } from '@skeletonlabs/skeleton-svelte';
@@ -28,6 +29,7 @@
 	import { goto } from '$app/navigation';
 	import toast from 'svelte-french-toast';
 	import { Info } from '@lucide/svelte';
+	import { storage } from '@sveu/browser';
 
 	let { data }: { data: PageData } = $props();
 	let disturb = $state(false);
@@ -40,23 +42,43 @@
 		localSpaces.current = [];
 		first.current = true;
 		data_theme.current = { label: 'Mona', value: 'mona', color: 'text-purple-500' };
-		goto('/tabs/home')
-		home.pageTitle = 'Home'
+		home.pageTitle = 'Home';
+		toast('Everything Wiped!', {
+			icon: '⚠️',
+			style: 'border-radius: 200px; background: #4a3342; color: #fff;'
+		});
+
+		caches.keys().then(function (names) {
+			for (let name of names) {
+				console.log(name + " Deleted", caches.delete(name));
+
+			}
+		});
+
+		localStorage.clear();
+		
+		// Optionally, you can also clear the session storage
+		sessionStorage.clear();
+		// Optionally, you can also clear the cookies
+		document.cookie.split(';').forEach((c) => {
+			document.cookie = c
+				.replace(/^ +/, '')
+				.replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+		});
+		// Optionally, you can also clear the indexedDB
+		if (window.indexedDB) {
+			const request = indexedDB.deleteDatabase('glovebox');
+			request.onsuccess = () => {
+				console.log('IndexedDB cleared');
+			};
+			request.onerror = (event) => {
+				console.error('Error clearing IndexedDB:', event);
+			};
+		}
+
+		location.replace('/');
 	}
-	const colors = [
-	'red',
-	'blue',
-	'green',
-	
-	'red',
-	'blue',
-	'green',
-	
-	'red',
-	'blue',
-	'green',
-	
-	];
+	const colors = ['red', 'blue', 'green', 'red', 'blue', 'green', 'red', 'blue', 'green'];
 	let color = $state(colors[0]);
 
 	function setColor(selectedColor: string) {
@@ -100,12 +122,12 @@
 					<p class="text-xs text-gray-400">select a theme you want to apply.</p>
 				{/snippet}
 				{#snippet panel()}
-					<div class="grid gap-2 grid-cols-3 ">
+					<div class="grid grid-cols-3 gap-2">
 						<!-- Loop through the available colors -->
 						{#each comboboxData as c}
 							<!-- On selection, set the color state, dynamically update classes -->
 							<button
-								class={`chip h-12 text-lg capitalize bg-primary-500 ${data_theme.current.value === c.value ? 'preset-filled' : 'preset-tonal'}`}
+								class={`chip bg-primary-500 h-12 text-lg capitalize ${data_theme.current.value === c.value ? 'preset-filled' : 'preset-tonal'}`}
 								onclick={() => {
 									data_theme.current = c;
 									document.documentElement.setAttribute('data-theme', c.value);
@@ -113,17 +135,17 @@
 							>
 								<span>{c.label}</span>
 							</button>
-							{/each}
-						</div>
-						<button
-							class={`chip w-full mt-2 h-12 text-lg capitalize bg-primary-500 ${data_theme.current.value === 'none' ? 'preset-filled' : 'preset-tonal'}`}
-							onclick={() => {
-								data_theme.current.value = 'none';
-								document.documentElement.setAttribute('data-theme', data_theme.current.value);
-							}}
-						>
-							<span>None</span>
-						</button>
+						{/each}
+					</div>
+					<button
+						class={`chip bg-primary-500 mt-2 h-12 w-full text-lg capitalize ${data_theme.current.value === 'none' ? 'preset-filled' : 'preset-tonal'}`}
+						onclick={() => {
+							data_theme.current.value = 'none';
+							document.documentElement.setAttribute('data-theme', data_theme.current.value);
+						}}
+					>
+						<span>None</span>
+					</button>
 				{/snippet}
 			</Accordion.Item>
 
@@ -284,11 +306,7 @@
 					onclick={() => {
 						DeleteEverything();
 						formatDialogue = false;
-						goto('/tabs/home');
-						toast('Everything Wiped!', {
-							icon: '⚠️',
-							style: 'border-radius: 200px; background: #4a3342; color: #fff;'
-						});
+						// goto('/tabs/home');
 					}}
 					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 font-mono text-lg font-bold text-red-400"
 					>Yes, Im Sure</button

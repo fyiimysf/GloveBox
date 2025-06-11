@@ -7,3 +7,13 @@ const cacheFiles = [...build, ...files, ...prerendered].map((files) => ({
 }));
 
 precacheAndRoute(cacheFiles);
+
+self.addEventListener('install', (event) => {
+	self.skipWaiting(); // Activating the new service worker on install
+});
+
+self.addEventListener('message', (event) => {
+	if (event.data.type === 'SKIP_WAITING') {
+		self.skipWaiting();
+	}
+});

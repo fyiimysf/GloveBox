@@ -540,7 +540,7 @@
 				<div class="input-group grid-cols-auto relative">
 					<input
 						form="input[]"
-						class="ig-input overflow-x-auto bg-primary-500/20"
+						class="ig-input bg-primary-500/20 overflow-x-auto"
 						bind:value={sharedItem.title}
 						type="text"
 						required
@@ -551,7 +551,7 @@
 							onclick={() => {
 								sharedItem.title = '';
 							}}
-							class=" text-surface-200/30 bg-surface-900/80 rounded-full absolute right-0 m-2 "
+							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
 						/>
 					{:else}
 						<Info
@@ -573,7 +573,7 @@
 							onclick={() => {
 								sharedItem.text = '';
 							}}
-							class=" text-surface-200/30 bg-surface-900/80 rounded-full absolute right-0 m-2 "
+							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
 						/>
 					{:else}
 						<Info
@@ -588,7 +588,7 @@
 						/>
 					{/if}
 					<textarea
-						class="input-group overflow-y-auto bg-primary-500/20 ig-input w-full"
+						class="input-group bg-primary-500/20 ig-input w-full overflow-y-auto"
 						rows="3"
 						placeholder="Description *"
 						bind:value={sharedItem.text}
@@ -622,7 +622,7 @@
 							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
 						/>
 					{:else}
-						<Info
+						<!-- <Info
 							onclick={() => {
 								toast('Required to add a URL', {
 									icon: '⚠️',
@@ -631,28 +631,28 @@
 								});
 							}}
 							class=" text-primary-200/30 absolute right-0 m-2 "
-						/>
+						/> -->
 						<Clipboard
 							onclick={() => {
 								navigator.clipboard
 									.readText()
 									.then((text) => {
 										url = text;
-										handleSubmit()
+										handleSubmit();
 									})
 									.catch((err) => {
 										console.error('Failed to read clipboard: ', err);
 									});
 							}}
-							class=" text-primary-200/30 absolute right-7 m-2 "
+							class=" text-primary-200/30 absolute right-0 m-2 "
 						/>
 					{/if}
 				</div>
 				<hr class="hr" />
 				{#if localSpaces.current.length > 0}
 					<div class="flex flex-row gap-1">
-						<p class="text-sm">Assign a Space </p>
-						<p class="text-xs text-error-300">( + will discard data entered)</p>
+						<p class="text-sm">Assign a Space</p>
+						<p class="text-error-300 text-sm font-light">( + will discard data entered )</p>
 					</div>
 					<div class="flex gap-2 overflow-auto pb-2">
 						{#each localSpaces.current as obj}
@@ -662,7 +662,8 @@
 										chipName = '';
 									}}
 									type="button"
-									class="chip bg-{obj.clr}-400 rounded-full">{obj.name}</button
+									class="badge bg-{obj.clr}-400/30 text-{obj.clr}-400 rounded-full"
+									>{obj.name}</button
 								>
 							{:else}
 								<button
@@ -670,7 +671,7 @@
 										chipName = obj.name;
 									}}
 									type="button"
-									class="chip preset-outlined rounded-full">{obj.name}</button
+									class="badge preset-outlined rounded-full">{obj.name}</button
 								>
 							{/if}
 						{/each}
@@ -786,7 +787,7 @@
 						bind:value={space.name}
 						type="text"
 						required
-						placeholder="Name"
+						placeholder="Name*"
 					/>
 				</div>
 				<textarea
@@ -804,18 +805,25 @@
 						class="btn preset-filled w-full bg-{space.clr}-400 p-3"
 						onclick={() => {
 							if (space.name !== '') {
-								console.log('space added: ' + space.name);
-								localSpaces.current.push(space);
-								openPopup = !openPopup;
-								toast.success('Space "' + space.name + '" Created', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-								space.clr = 'purple';
-								space.name = space.desc = '';
+								if (!localSpaces.current.find((spc: any) => spc.name === space.name)) {
+									console.log('space added: ' + space.name);
+									localSpaces.current.push(space);
+									openPopup = !openPopup;
+									toast.success('Space "' + space.name + '" Created', {
+										style: 'border-radius: 200px; background: #333; color: #fff;',
+										duration: 1500
+									});
+									space.clr = 'purple';
+									space.name = space.desc = '';
+								} else {
+									toast.error('Space "' + space.name + '" already exists', {
+										style: 'border-radius: 200px; background: #333; color: #fff;',
+										duration: 1500
+									});
+								}
 							} else {
 								console.log('Important Fields Empty in Spaces');
-								toast.error('Name is Missing', {
+								toast.error('Important fields are missing', {
 									style: 'border-radius: 200px; background: #333; color: #fff;',
 									duration: 1500
 								});
