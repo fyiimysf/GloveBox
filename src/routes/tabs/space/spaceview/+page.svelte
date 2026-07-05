@@ -5,40 +5,37 @@
 	import { ArrowLeft, CircleSlash } from 'lucide-svelte';
 </script>
 
-<div in:blur|global class="relative  z-1">
-	<div
-	in:fly|global
-	class="grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1 '}"
-	>
-	{#each [...spaceview.viewItems].reverse() as itemCard}
-				<button
-					class="{home.spaceviewLayout ? '' : 'm-1'}"
-					onclick={() => {
-						cardPage.title = itemCard.title;
-						cardPage.img = itemCard.img;
-						cardPage.link = itemCard.link;
-						cardPage.text = itemCard.text;
-						cardPage.date = itemCard.date;
-						cardPage.url = itemCard.url;
-					}}
-				>
-					<Cards
-						h1={itemCard.title}
-						p={itemCard.text}
-						img={itemCard.img}
-						fL={itemCard.link}
-						fR={itemCard.date}
-						full={home.spaceviewLayout}
-						item={itemCard}
-					/>
-				</button>
-				{#if home.spaceviewLayout}
-					<br/>
-				{/if}
-				{/each}
-			</div>
-		</div>
-		<br/>
+<div in:blur|global class="relative z-1">
+	<div in:fly|global class="grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1 '}">
+		{#each [...spaceview.viewItems].reverse() as itemCard}
+			<button
+				class={home.spaceviewLayout ? '' : 'm-1'}
+				onclick={() => {
+					cardPage.title = itemCard.title;
+					cardPage.img = itemCard.img;
+					cardPage.link = itemCard.link;
+					cardPage.text = itemCard.text;
+					cardPage.date = itemCard.date;
+					cardPage.url = itemCard.url;
+				}}
+			>
+				<Cards
+					h1={itemCard.title}
+					p={itemCard.text}
+					img={itemCard.img}
+					fL={itemCard.link}
+					fR={itemCard.date}
+					full={home.spaceviewLayout}
+					item={itemCard}
+				/>
+			</button>
+			{#if home.spaceviewLayout}
+				<br />
+			{/if}
+		{/each}
+	</div>
+</div>
+<br />
 
 {#if spaceview.viewItems.length < 1}
 	<div
@@ -50,12 +47,13 @@
 	</div>
 {/if}
 
+<!-- Back Button -->
 <button
 	in:slide
 	onclick={() => {
 		history.back();
 	}}
-	class="btn bg-primary-900/60 border-2 border-primary-900  fixed bottom-3 z-10 h-10 w-[94%] rounded-lg backdrop-blur"
+	class="btn bg-primary-950/70 fixed bottom-6 left-1/2 z-9 w-80 -translate-x-1/2 rounded-2xl backdrop-blur"
 >
 	<ArrowLeft />
 	Go Back

@@ -20,7 +20,7 @@
 <!-- svelte-ignore a11y_consider_explicit_label -->
 <button
 	id="dropdownMenuIconButton"
-	class=" rounded-full bg-black/30 p-1 backdrop-blur"
+	class=" rounded-full p-1 mix-blend-difference backdrop-blur"
 	type="button"
 	onclick={() => {
 		dropMenu = !dropMenu;
@@ -42,7 +42,7 @@
 			dropMenu = false;
 			spaceMenu = false;
 		}}
-		class="fixed inset-0 z-1 bg-black/30 backdrop-blur-[1px]"
+		class="fixed inset-0 z-1 bg-black/50 backdrop-blur-[1px]"
 	></div>
 {/if}
 {#if dropMenu}
@@ -54,7 +54,7 @@
 		onclick={() => {
 			dropMenu = !dropMenu;
 		}}
-		class="bg-primary-950/70 absolute z-100 w-35 rounded-lg px-2 py-1 text-xs font-bold text-white shadow-sm backdrop-blur-lg"
+		class="bg-primary-950/60 absolute z-100 w-35 rounded-lg px-2 py-1 text-xs font-bold text-white shadow-sm backdrop-blur-lg"
 	>
 		{#if data.url !== ''}
 			<a target="_blank" href={data.url} class="">

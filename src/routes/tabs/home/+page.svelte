@@ -102,7 +102,9 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="">
-				<div class="absolute z-6 m-2 items-center rounded-full">
+				<div
+					class="card border-surface-200-800/0 card-hover absolute m-2 block h-fit w-full rounded-xl"
+				>
 					<DropDown data={item} />
 				</div>
 				{#if item.url !== ''}
@@ -110,13 +112,14 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="  absolute right-3 mt-2 rounded-full bg-black/30 text-white backdrop-blur"
+						class="  absolute right-3 mt-2 rounded-full bg-black/30 text-white mix-blend-difference"
 						><Link class="text-primary-200 size-7 p-1" /></a
-						
 					>
 				{/if}
-				<a onclick={() => CardPage(item.title, item.img, item.link, item.text, item.date, item.url)}
-					href="/card">
+				<a
+					onclick={() => CardPage(item.title, item.img, item.link, item.text, item.date, item.url)}
+					href="/card"
+				>
 					<header>
 						<Image
 							src={img}
@@ -152,7 +155,7 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class=" absolute right-1 mt-1 rounded-full bg-black/40 backdrop-blur"
+						class=" absolute right-1 mt-1 rounded-full mix-blend-difference"
 						><Link class=" text-primary-200 size-6 p-1" /></a
 					>
 				{/if}
@@ -223,10 +226,10 @@
 </div>
 <div
 	in:blur={{ delay: 100 }}
-	class="fixed inset-0 bottom-20 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
+	class="fixed inset-0 bottom-25 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
 >
 	{#if localItems.current.length < 1}
-		<p class="animate-bounce">Add Item</p>
+		<p class="animate-bounce">Add an Item</p>
 		<ArrowDown class="size-10 animate-bounce" />
 	{/if}
 </div>

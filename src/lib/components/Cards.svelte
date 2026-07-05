@@ -57,11 +57,11 @@
 		// });
 		CardPage(item.title, item.img, item.link, item.text, item.date, item.url);
 	}}
-	class=" card divide-surface-200-800 overflow-hidden "
+	class=" card divide-surface-200-800 overflow-hidden"
 >
 	{#if full}
 		<div in:blur class=" bg-surface-900 shadow-lg">
-			<div class="absolute m-1 rounded-full shadow-lg">
+			<div class="absolute m-2 rounded-full">
 				<DropDown data={item} />
 			</div>
 			{#if item.url !== ''}
@@ -69,8 +69,8 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class=" text-primary-400 absolute right-2 top-2  rounded-full bg-black/5 shadow-lg backdrop-blur-lg"
-					><Link class="size-7 p-1" /></a
+					class=" text-primary-400 absolute right-3 z-11 mt-3 rounded-full bg-black/5 mix-blend-difference backdrop-blur-lg"
+					><Link class="size-7 p-1 " /></a
 				>
 			{/if}
 			<header>
@@ -95,17 +95,17 @@
 				<div>
 					<p class="p">{h1}</p>
 				</div>
-				<small class="overflow-hidden opacity-60 justify-start">{p}</small>
+				<small class="justify-start overflow-hidden opacity-60">{p}</small>
 			</article>
-			<footer class="bg-black/10 flex items-center justify-between px-3 py-1">
+			<footer class="flex items-center justify-between bg-black/10 px-3 py-1">
 				<small class="text-justify opacity-60">{fL}</small>
 				<small class="opacity-60">On {fR}</small>
 			</footer>
 		</div>
 	{:else}
 		<div in:blur class="card relative h-27 overflow-hidden rounded-xl shadow-lg">
-			{#if page.route.id === 'tabs/space'}
-				<div class="absolute z-100 rounded-full shadow-lg">
+			{#if page.route.id === '/tabs/space'}
+				<div class="absolute z-100">
 					<DropDown data={item} />
 				</div>
 				<!-- svelte-ignore node_invalid_placement_ssr -->
@@ -129,7 +129,7 @@
 				}}
 			/>
 
-			<article class="relative bottom-8 rounded-b-xl bg-primary-900/0 p-1 backdrop-blur-sm">
+			<article class="bg-primary-900/0 relative bottom-8 rounded-b-xl p-1 mix-blend-difference">
 				<span class="-space-y-2">
 					<p class="p truncate px-1">{h1}</p>
 					<!-- <small class="w-fit truncate rounded-lg bg-black/20 px-1 opacity-60">{fL}</small> -->

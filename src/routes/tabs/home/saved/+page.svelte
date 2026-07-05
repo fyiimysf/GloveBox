@@ -27,12 +27,13 @@
 	</div>
 </div>
 
+<!-- Back Button -->
 <button
 	in:slide
 	onclick={() => {
 		history.back();
 	}}
-	class="btn bg-primary-950/70 fixed bottom-2 z-9 h-10 w-[94%] rounded-lg backdrop-blur"
+	class="btn bg-primary-950/70 fixed bottom-6 left-1/2 z-9 w-80 -translate-x-1/2 rounded-2xl backdrop-blur"
 >
 	<ArrowLeft />
 	Go Back

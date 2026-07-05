@@ -46,7 +46,8 @@
 		cardPage,
 		first,
 		spaceview,
-		data_theme
+		data_theme,
+		shareTarget
 	} from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
@@ -68,6 +69,28 @@
 		// console.log(home.homeLayout);
 		if (page.route.id == '/tabs/space') {
 			home.spaceDelete = false;
+		}
+	});
+
+	$effect(() => {
+		if (shareTarget.current) {
+			let targetUrl = shareTarget.current.url;
+			if (!targetUrl && shareTarget.current.text) {
+				const match = shareTarget.current.text.match(/https?:\/\/[^\s]+/);
+				if (match) targetUrl = match[0];
+			}
+			if (targetUrl) {
+				if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+					targetUrl = 'https://' + targetUrl;
+				}
+				url = targetUrl;
+				handleSubmit();
+			}
+			if (shareTarget.current.title && !shareTarget.current.title.startsWith('http')) {
+				sharedItem.title = shareTarget.current.title;
+			}
+			openPopup = true;
+			shareTarget.current = null;
 		}
 	});
 
@@ -148,7 +171,7 @@
 	let spaceMenu = $state(false);
 </script>
 
-<div class="grid h-screen w-screen grid-rows-[auto_1fr_auto]">
+<div class="grid h-screen w-screen grid-rows-[auto_1fr_auto] select-none">
 	<!-- Header -->
 	<header in:slide class="sticky top-0 z-10 backdrop-blur-xl">
 		<!-- <AppBarC title={value} {homeLayout}></AppBarC> -->
@@ -221,29 +244,26 @@
 	<!-- Footer -->
 	<!-- Component -->
 	{#if (page.route.id === '/tabs/home' || page.route.id === '/tabs/space') && !first.current}
-		<div
-			transition:slide|global
-			class="border-primary-200 sticky bottom-0 z-11 grid grid-rows-[1fr_auto]"
-		>
+		<div transition:slide|global class="fixed right-4 bottom-5 left-4 z-11">
 			<Navigation.Bar
-				classes="bg-surface-950/70 backdrop-blur"
+				classes="bg-black/50 backdrop-blur-xl rounded-3xl border-2 border-primary-500/30"
 				value={home.pageTitle}
 				onValueChange={(newValue) => {
 					home.pageTitle = newValue;
 				}}
 			>
 				<Navigation.Tile
-					active=" border-1 border-primary-200 bg-primary-900/50 "
-					rounded="rounded-3xl rounded-l-lg rounded-b-lg"
+					active=" bg-primary-800/50 text-primary-200 "
+					rounded="rounded-2xl rounded-r-lg"
 					href="/tabs/home/"
 					id="Home"
 					label="Home"><Home /></Navigation.Tile
 				>
 
-				<div class="flex items-center justify-center px-2">
+				<div class="px-1">
 					<button
 						type="button"
-						class="btn-icon preset-tonal-primary z-20 size-8 rounded-2xl px-8"
+						class="btn-icon bg-primary-400 z-20 h-12.5 w-12 rounded-lg px-4"
 						onclick={() => {
 							url =
 								sharedItem.img =
@@ -256,13 +276,13 @@
 							openPopup = true;
 						}}
 					>
-						<Plus />
+						<Plus class="text-black" />
 					</button>
 				</div>
 
 				<Navigation.Tile
-					active="border-1 border-primary-200 bg-primary-900/50 "
-					rounded="rounded-3xl rounded-b-lg rounded-r-lg"
+					active=" bg-primary-800/50 text-primary-200 "
+					rounded="rounded-2xl rounded-l-lg"
 					href="/tabs/space/"
 					id="Space"
 					label="Space"><CircleDashed /></Navigation.Tile
@@ -277,7 +297,7 @@
 		>
 			{@render PopUpCard()}
 			<button
-				class="btn preset-tonal fixed bottom-5 w-80 py-2"
+				class="btn fixed bottom-10 w-80 py-2 text-white"
 				aria-label="title"
 				onclick={() => {
 					openPopup = false;
@@ -520,6 +540,7 @@
 
 {#snippet PopUpCard()}
 	<!-- Home Page PopUp Card -->
+	<div class="absolute inset-0 bg-black/30"></div>
 	<div
 		transition:fly={{ y: 100, duration: 200 }}
 		class="card bg-surface-900/90 right-0 bottom-0 left-0 z-200 m-4 w-full p-3 backdrop-blur-xl"

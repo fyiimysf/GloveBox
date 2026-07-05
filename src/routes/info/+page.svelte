@@ -2,71 +2,95 @@
 	import avatar from '$lib/assets/avatar.jpg';
 	import { Github, Instagram, Linkedin, Twitter } from '@lucide/svelte';
 	import { Avatar } from '@skeletonlabs/skeleton-svelte';
-	import { ArrowLeftIcon, ArrowUpRightFromSquare, Link2 } from 'lucide-svelte';
-	import { blur } from 'svelte/transition';
-    let links = {
-        repo : 'https://github.com/fyiimysf/GloveBox',
-        github : 'https://github.com/fyiimysf',
-        linkedIn : 'https://www.linkedin.com/in/yousaf-mohammad',
-        insta : 'https://www.instagram.com/uceph.em/',
-        blsk : 'https://bsky.app/profile/fyiimysf.bsky.social',
-    }
-
-    
+	import { ArrowLeft, ArrowLeftIcon, ArrowUpRightFromSquare, Link2 } from 'lucide-svelte';
+	import { blur, slide } from 'svelte/transition';
+	let links = {
+		repo: 'https://github.com/fyiimysf/GloveBox',
+		github: 'https://github.com/fyiimysf',
+		linkedIn: 'https://www.linkedin.com/in/yousaf-mohammad',
+		insta: 'https://www.instagram.com/uceph.em/',
+		blsk: 'https://bsky.app/profile/fyiimysf.bsky.social'
+	};
 </script>
 
 <div in:blur class="relative flex h-fit w-full flex-col gap-2">
-	<div
-		class="card flex flex-col items-center justify-between gap-1 rounded-xl p-3"
-	>
-	<img src={avatar} alt="pfp" class="size-26 rounded-full shadow-xl" />
-	This app was created by <a target="_blank" href="https://fyiimysf.pages.dev" class='text-primary-300' >Mohammad Yousaf</a>
+	<div class="card flex flex-col items-center justify-between gap-1 rounded-xl p-3">
+		<img src={avatar} alt="pfp" class="size-26 rounded-full shadow-xl" />
+		This app was created by
+		<a target="_blank" href="https://fyiimysf.pages.dev" class="text-primary-300">Mohammad Yousaf</a
+		>
 		<p class="card flex items-center justify-stretch rounded-xl p-2 text-justify">
 			Glove Box is a URL stashing app that allows you to save and organize your favorite links. You
 			can categorize your links for better organization and quick access.
 		</p>
 	</div>
-    
-	<a href='{links.repo}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
+
+	<a
+		href={links.repo}
+		target="_blank"
+		class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg"
+	>
 		<div class="flex gap-3">
 			<Link2 />
 			<p>Project Repo</p>
 		</div>
 		<ArrowUpRightFromSquare />
 	</a>
-	<a href='{links.linkedIn}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
+	<a
+		href={links.linkedIn}
+		target="_blank"
+		class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg"
+	>
 		<div class="flex gap-3">
 			<Linkedin />
 			<p>LinkedIn</p>
 		</div>
 		<ArrowUpRightFromSquare />
 	</a>
-	<a href='{links.github}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
+	<a
+		href={links.github}
+		target="_blank"
+		class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg"
+	>
 		<div class="flex gap-3">
 			<Github />
 			<p>GitHub</p>
 		</div>
 		<ArrowUpRightFromSquare />
 	</a>
-	<a href='{links.insta}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
+	<a
+		href={links.insta}
+		target="_blank"
+		class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg"
+	>
 		<div class="flex gap-3">
 			<Instagram />
 			<p>Instagram</p>
 		</div>
 		<ArrowUpRightFromSquare />
 	</a>
-	<a href='{links.blsk}' target="_blank" class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg">
+	<a
+		href={links.blsk}
+		target="_blank"
+		class="card bg-primary-900/50 flex items-center justify-between gap-4 rounded-xl p-3 text-lg"
+	>
 		<div class="flex gap-3">
 			<Twitter />
 			<p>BlueSky</p>
 		</div>
 		<ArrowUpRightFromSquare />
 	</a>
-	<br/>
-	<br/>
+	<br />
+	<br />
 </div>
-<button onclick="{()=>{history.back()}}"  class="btn preset-tonal backdrop-blur-sm fixed left-0 right-0 m-2 bottom-0 flex items-center justify-between gap-4 rounded-xl p-3">
-    <ArrowLeftIcon />
-    <p>Back</p>
-    <div class="size-4"></div>
+<!-- Back Button -->
+<button
+	in:slide
+	onclick={() => {
+		history.back();
+	}}
+	class="btn bg-primary-950/70 fixed bottom-10 left-1/2 z-9 w-80 -translate-x-1/2 rounded-2xl backdrop-blur"
+>
+	<ArrowLeft />
+	Go Back
 </button>

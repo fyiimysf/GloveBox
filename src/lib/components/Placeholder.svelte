@@ -1,6 +1,5 @@
 <script>
-	import { blur } from "svelte/transition";
-
+	import { blur } from 'svelte/transition';
 </script>
 
 <main transition:blur|global>

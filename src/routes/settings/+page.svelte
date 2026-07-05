@@ -50,13 +50,12 @@
 
 		caches.keys().then(function (names) {
 			for (let name of names) {
-				console.log(name + " Deleted", caches.delete(name));
-
+				console.log(name + ' Deleted', caches.delete(name));
 			}
 		});
 
 		localStorage.clear();
-		
+
 		// Optionally, you can also clear the session storage
 		sessionStorage.clear();
 		// Optionally, you can also clear the cookies
@@ -290,7 +289,7 @@
 	onclick={() => {
 		history.back();
 	}}
-	class="btn bg-primary-950/70 fixed bottom-2 z-9 h-10 w-[94%] rounded-lg backdrop-blur"
+	class="btn bg-primary-950/70 fixed bottom-6 left-1/2 z-9 w-80 -translate-x-1/2 rounded-2xl backdrop-blur"
 >
 	<ArrowLeft />
 	Go Back

@@ -6,7 +6,9 @@ const config = {
 	// Consult https://svelte.dev/docs/kit/integrations
 	// for more information about preprocessors
 	preprocess: vitePreprocess(),
-
+    vitePlugin: {
+		inspector:true
+	},
 	kit: {
 		adapter: adapter({
 			// See below for an explanation of these options
@@ -23,7 +25,8 @@ const config = {
 			}
 		}),
 		csrf: {
-			checkOrigin: false
+			checkOrigin: false,
+			trustedOrigins: ['*']
 		}
 	}
 };

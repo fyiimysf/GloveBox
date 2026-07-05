@@ -188,7 +188,7 @@
 	in:blur={{ delay: 100 }}
 	class="fixed {localSpaces.current.length < 1
 		? 'inset-0'
-		: ''} bottom-20 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
+		: ''} bottom-25 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
 >
 	{#if localSpaces.current.length < 1}
 		<p class="animate-bounce">Add a Space</p>

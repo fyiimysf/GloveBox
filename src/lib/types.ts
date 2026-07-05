@@ -22,7 +22,7 @@ export interface Space {
 }
 
 export interface ComboboxData {
-    label: string;
-    value: string;
-    color: string;
-  }
+	label: string;
+	value: string;
+	color: string;
+}

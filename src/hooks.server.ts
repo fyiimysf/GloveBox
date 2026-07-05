@@ -14,7 +14,6 @@ export const handle: Handle = async ({ resolve, event }) => {
 			});
 		}
 	}
-	
 
 	// Resolve the request and append CORS headers
 	const response = await resolve(event);
@@ -23,4 +22,3 @@ export const handle: Handle = async ({ resolve, event }) => {
 	}
 	return response;
 };
-

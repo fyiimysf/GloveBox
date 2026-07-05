@@ -10,29 +10,28 @@ import type { Combobox } from '@skeletonlabs/skeleton-svelte';
 export const firstTime = $state({ value: true });
 
 export const comboboxData: ComboboxData[] = [
-    { label: 'Mona', value: 'mona', color: 'text-purple-500' },
-    { label: 'Nosh', value: 'nosh', color: 'text-red-500' },
-    { label: 'Vox', value: 'vox', color: 'text-pink-500' },
-    { label: 'Mint', value: 'mint', color: 'text-green-500' },
-    { label: 'Vintage', value: 'vintage', color: 'text-orange-500' },
-    { label: 'Modern', value: 'modern', color: 'text-blue-500' },
-    { label: 'Wintry', value: 'wintry', color: 'text-green-500' },
-    { label: 'Crimson', value: 'crimson', color: 'text-green-500' },
-    { label: 'Pine', value: 'pine', color: 'text-green-500' },
-  ];
+	{ label: 'Mona', value: 'mona', color: 'text-purple-500' },
+	{ label: 'Nosh', value: 'nosh', color: 'text-red-500' },
+	{ label: 'Vox', value: 'vox', color: 'text-pink-500' },
+	{ label: 'Mint', value: 'mint', color: 'text-green-500' },
+	{ label: 'Vintage', value: 'vintage', color: 'text-orange-500' },
+	{ label: 'Modern', value: 'modern', color: 'text-blue-500' },
+	{ label: 'Wintry', value: 'wintry', color: 'text-green-500' },
+	{ label: 'Crimson', value: 'crimson', color: 'text-green-500' },
+	{ label: 'Pine', value: 'pine', color: 'text-green-500' }
+];
 
 export const selectedTheme = $state({
-	theme:{ label: '', value: '', color: '' },
+	theme: { label: '', value: '', color: '' },
 	selected: ['']
 });
-
 
 export const home = $state({
 	homeLayout: false,
 	savedLayout: false,
 	spaceviewLayout: false,
 	spaceDelete: false,
-	pageTitle: 'Home',
+	pageTitle: 'Home'
 });
 
 export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $state({
@@ -85,6 +84,14 @@ export const localItems = new LocalStorage('localItems', []);
 
 export const localSpaces = new LocalStorage('localSpaces', []);
 
-export const data_theme = new LocalStorage('dataTheme', { label: 'Mona', value: 'mona', color: 'text-purple-500' });
+export const data_theme = new LocalStorage('dataTheme', {
+	label: 'Mona',
+	value: 'mona',
+	color: 'text-purple-500'
+});
 
 export const first = new LocalStorage('first', true);
+
+export const shareTarget = $state<{ current: { url: string; title: string; text: string } | null }>(
+	{ current: null }
+);
