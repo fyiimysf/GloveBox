@@ -301,15 +301,14 @@
 			<p class="text-center text-2xl font-bold">Delete everything?</p>
 			<p class="text-md pb-4 text-center font-mono">can't be undone</p>
 			<div class="flex w-full items-center justify-around gap-4">
-				<button
-					onclick={() => {
-						DeleteEverything();
-						formatDialogue = false;
-						// goto('/tabs/home');
-					}}
-					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 font-mono text-lg font-bold text-red-400"
-					>Yes, Im Sure</button
-				>
+			<button
+				onclick={() => {
+					formatDialogue = false;
+					DeleteEverything();
+				}}
+				class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 font-mono text-lg font-bold text-red-400"
+				>Yes, Im Sure</button
+			>
 				<button
 					onclick={() => {
 						formatDialogue = false;

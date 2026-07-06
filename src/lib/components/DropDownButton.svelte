@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { cardPage, localItems, localSpaces, spaceview } from '$lib/shared.svelte';
+	import { cardPage, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, setUndoRemove } from '$lib/shared.svelte';
 	import { CircleDashed, CircleDot, CircleOff, CircleX, Trash2 } from '@lucide/svelte';
 	import { CircleDotDashed, Delete, Link, MoreVertical, Trash, X } from 'lucide-svelte';
 	import { fade, slide, blur, fly } from 'svelte/transition';
-	import AddtoSpace from './AddtoSpace.svelte';
 	import toast from 'svelte-french-toast';
 	import { page } from '$app/state';
 
@@ -74,27 +73,38 @@
 						<div class="py-1">
 							<div class="block py-1">
 								<span
-									onclick={() => {
-										spaceObj.items.forEach((item: any) => {
-											if (item.title === data.title) {
-												let tempArr2 = spaceObj.items.filter(
-													(item: any) => item.title !== data.title
-												);
-												spaceObj.items = tempArr2;
-											}
-										});
-										spaceview.viewItems.forEach((item: any) => {
-											if (item.title === data.title) {
-												let tempArr3 = spaceview.viewItems.filter(
-													(item: any) => item.title !== data.title
-												);
-												spaceview.viewItems = tempArr3;
-											}
-										});
-										toast.success('Item Deleted from ' + spaceObj.name, {
-											style: 'border-radius: 200px; background: #333; color: #fff;',
-											duration: 1500
-										});
+									onclick={(e) => {
+										e.stopPropagation();
+										dropMenu = false;
+										confirmState.open = true;
+										confirmState.title = 'Remove from ' + spaceObj.name + '?';
+										confirmState.message = data.title;
+										confirmState.confirmText = 'Remove';
+										confirmState.onConfirm = () => {
+											const deletedItem = data;
+											spaceObj.items.forEach((item: any) => {
+												if (item.title === data.title) {
+													let tempArr2 = spaceObj.items.filter(
+														(item: any) => item.title !== data.title
+													);
+													spaceObj.items = tempArr2;
+												}
+											});
+											spaceview.viewItems.forEach((item: any) => {
+												if (item.title === data.title) {
+													let tempArr3 = spaceview.viewItems.filter(
+														(item: any) => item.title !== data.title
+													);
+													spaceview.viewItems = tempArr3;
+												}
+											});
+											const msg = truncate(data.title) + ' removed';
+											setUndoRemove(msg, [deletedItem], spaceObj.name);
+											toast.success(msg, {
+												style: 'border-radius: 200px; background: #333; color: #fff;',
+												duration: 2000
+											});
+										};
 									}}
 									class="flex justify-between text-{spaceObj.clr}-400"
 								>
@@ -132,24 +142,39 @@
 		{/if}
 		{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
 			<div
-				onclick={() => {
-					let tempArr = localItems.current.filter((item: any) => item.title !== data.title);
-					localItems.current = tempArr;
-					localSpaces.current.forEach((spc: any) => {
-						spc.items.forEach((item: any) => {
-							if (item.title === data.title) {
-								let tempArr2 = spc.items.filter((item: any) => item.title !== data.title);
-								spc.items = tempArr2;
+				onclick={(e) => {
+					e.stopPropagation();
+					dropMenu = false;
+					confirmState.open = true;
+					confirmState.title = 'Delete Item?';
+					confirmState.message = data.title;
+					confirmState.confirmText = 'Delete';
+					confirmState.onConfirm = () => {
+						const deletedItem = localItems.current.find((i: any) => i.title === data.title);
+						const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+						for (const spc of localSpaces.current) {
+							if (spc.items.some((i: any) => i.title === data.title)) {
+								spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
 							}
+						}
+						let tempArr = localItems.current.filter((item: any) => item.title !== data.title);
+						localItems.current = tempArr;
+						localSpaces.current.forEach((spc: any) => {
+							spc.items.forEach((item: any) => {
+								if (item.title === data.title) {
+									let tempArr2 = spc.items.filter((item: any) => item.title !== data.title);
+									spc.items = tempArr2;
+								}
+							});
 						});
-					});
-					console.log(localSpaces.current);
-					console.log(localItems.current);
-					toast(data.title + ' Deleted', {
-						icon: '🗑️',
-						style: 'border-radius: 200px; background: #333; color: #fff;',
-						duration: 3000
-					});
+						const msg = truncate(data.title) + ' Deleted';
+						setUndo(msg, [deletedItem], spaceMappings);
+						toast(msg, {
+							icon: '🗑️',
+							style: 'border-radius: 200px; background: #333; color: #fff;',
+							duration: 2000
+						});
+					};
 				}}
 				class="py-1"
 			>

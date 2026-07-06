@@ -31,7 +31,23 @@ export const home = $state({
 	savedLayout: false,
 	spaceviewLayout: false,
 	spaceDelete: false,
-	pageTitle: 'Home'
+	pageTitle: 'Home',
+	selectMode: false,
+	selectedTitles: [] as string[]
+});
+
+export const confirmState = $state<{
+	open: boolean;
+	title: string;
+	message: string;
+	confirmText: string;
+	onConfirm: (() => void) | null;
+}>({
+	open: false,
+	title: 'Confirm',
+	message: 'Are you sure?',
+	confirmText: 'Delete',
+	onConfirm: null
 });
 
 export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $state({
@@ -73,6 +89,43 @@ export const cardPage: {
 	date: new Date().toLocaleDateString()
 });
 
+try {
+	if (typeof sessionStorage !== 'undefined') {
+		const saved = sessionStorage.getItem('cardPage');
+		if (saved) {
+			const data = JSON.parse(saved);
+			cardPage.title = data.title;
+			cardPage.img = data.img;
+			cardPage.link = data.link;
+			cardPage.text = data.text;
+			cardPage.date = data.date;
+			cardPage.url = data.url;
+		}
+	}
+} catch {}
+
+export function saveCardPage(): void {
+	if (typeof sessionStorage !== 'undefined') {
+		sessionStorage.setItem(
+			'cardPage',
+			JSON.stringify({
+				title: cardPage.title,
+				img: cardPage.img,
+				link: cardPage.link,
+				text: cardPage.text,
+				date: cardPage.date,
+				url: cardPage.url
+			})
+		);
+	}
+}
+
+export function saveSpaceviewName(name: string): void {
+	if (typeof sessionStorage !== 'undefined') {
+		sessionStorage.setItem('spaceviewName', name);
+	}
+}
+
 export const space: { name: string; clr: string; desc: string } = $state({
 	name: '',
 	clr: 'purple',
@@ -95,3 +148,103 @@ export const first = new LocalStorage('first', true);
 export const shareTarget = $state<{ current: { url: string; title: string; text: string } | null }>(
 	{ current: null }
 );
+
+export function truncate(str: string, max: number = 30): string {
+	return str.length > max ? str.slice(0, max) + '…' : str;
+}
+
+let undoTimeout: ReturnType<typeof setTimeout> | null = null;
+
+export const undoState = $state<{
+	pending: boolean;
+	message: string;
+	action: 'delete' | 'remove-from-space' | 'delete-space';
+	deletedItems: any[];
+	spaceMappings: Array<{ spaceName: string; items: any[] }>;
+	spaceName?: string;
+}>({
+	pending: false,
+	message: '',
+	action: 'delete',
+	deletedItems: [],
+	spaceMappings: []
+});
+
+export function setUndo(
+	message: string,
+	deletedItems: any[],
+	spaceMappings: Array<{ spaceName: string; items: any[] }> = []
+) {
+	clearUndo();
+	undoState.message = message;
+	undoState.deletedItems = deletedItems;
+	undoState.spaceMappings = spaceMappings;
+	undoState.action = 'delete';
+	undoState.pending = true;
+	undoTimeout = setTimeout(() => {
+		undoState.pending = false;
+		undoState.deletedItems = [];
+		undoState.spaceMappings = [];
+	}, 5000);
+}
+
+export function setUndoRemove(message: string, deletedItems: any[], spaceName: string) {
+	clearUndo();
+	undoState.message = message;
+	undoState.deletedItems = deletedItems;
+	undoState.action = 'remove-from-space';
+	undoState.spaceName = spaceName;
+	undoState.pending = true;
+	undoTimeout = setTimeout(() => {
+		undoState.pending = false;
+		undoState.deletedItems = [];
+		undoState.spaceName = '';
+	}, 5000);
+}
+
+export function clearUndo() {
+	if (undoTimeout) {
+		clearTimeout(undoTimeout);
+		undoTimeout = null;
+	}
+	undoState.pending = false;
+	undoState.deletedItems = [];
+	undoState.spaceMappings = [];
+}
+
+export function performUndo() {
+	if (!undoState.pending) return;
+
+	if (undoState.action === 'delete') {
+		const currentItems = [...localItems.current];
+		for (const item of undoState.deletedItems) {
+			if (!currentItems.some((i: any) => i.title === item.title)) {
+				currentItems.push(item);
+			}
+		}
+		localItems.current = currentItems;
+
+		for (const { spaceName, items } of undoState.spaceMappings) {
+			const space = localSpaces.current.find((s: any) => s.name === spaceName);
+			if (space) {
+				for (const item of items) {
+					if (!space.items.some((i: any) => i.title === item.title)) {
+						space.items.push(item);
+					}
+				}
+			}
+		}
+
+		clearUndo();
+	} else if (undoState.action === 'remove-from-space') {
+		const space = localSpaces.current.find((s: any) => (s as any).name === undoState.spaceName);
+		if (space) {
+			for (const item of undoState.deletedItems) {
+				if (!space.items.some((i: any) => i.title === item.title)) {
+					space.items.push(item);
+				}
+			}
+		}
+		clearUndo();
+	}
+}

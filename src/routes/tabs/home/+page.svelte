@@ -2,42 +2,53 @@
 	import { blur, draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
 	import { bounceIn, cubicIn, elasticInOut, linear, sineOut } from 'svelte/easing';
-	import { cardPage, home, localItems, spaceview } from '../../../lib/shared.svelte';
+	import { cardPage, home, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, saveCardPage } from '../../../lib/shared.svelte';
 	import {
-		AlertTriangle,
 		ArrowDown,
 		ChevronRight,
-		CircleAlert,
 		CircleMinus,
-		Frown
+		Trash2,
+		Square,
+		CheckSquare
 	} from 'lucide-svelte';
-	import { Link, Link2, MoreHorizontalIcon, MoreVerticalIcon } from '@lucide/svelte';
+	import { Link } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import toast from 'svelte-french-toast';
 	import DropDown from '$lib/components/DropDownButton.svelte';
 	import NoImageUrl from '$lib/assets/no-image.png';
-	import Placeholder from '$lib/components/Placeholder.svelte';
-	// import Card from '../card[id]/Cards.svelte';
 	import { Image } from '@unpic/svelte';
 
 	let { data } = $props();
 
-	let dropMenu = $state(false);
 	const imgError = (e: any) => (e.target.src = NoImageUrl);
-	function CardPage(
-		title: string,
-		img: any,
-		link: string,
-		text: string,
-		date: string,
-		url: string
-	) {
-		cardPage.title = title;
-		cardPage.img = img;
-		cardPage.link = link;
-		cardPage.text = text;
-		cardPage.date = date;
-		cardPage.url = url;
+
+	let visibleItems = $derived([...localItems.current].reverse().slice(0, 8));
+
+	function handleCardClick(item: any) {
+		if (home.selectMode) {
+			if (home.selectedTitles.includes(item.title)) {
+				home.selectedTitles = home.selectedTitles.filter((t: string) => t !== item.title);
+			} else {
+				home.selectedTitles = [...home.selectedTitles, item.title];
+			}
+			return;
+		}
+		cardPage.title = item.title;
+		cardPage.img = item.img;
+		cardPage.link = item.link;
+		cardPage.text = item.text;
+		cardPage.date = item.date;
+		cardPage.url = item.url;
+		saveCardPage();
+	}
+
+	function toggleSelectAll() {
+		let allSelected = visibleItems.every((item: any) => home.selectedTitles.includes(item.title));
+		if (allSelected) {
+			home.selectedTitles = [];
+		} else {
+			home.selectedTitles = visibleItems.map((item: any) => item.title);
+		}
 	}
 </script>
 
@@ -60,23 +71,10 @@
 		</a>
 
 		{#if home.homeLayout}
-			<!-- 1 card column -->
 			<div in:fly={{ y: 70 }} class="grid grid-cols-1 gap-3">
-				<!-- {#each Array(4) as _}
-				{@render Card(
-					'https://picsum.photos/200',
-					'Card Title',
-					'Card Subtitle',
-					'Card Description',
-					'Card Footer Left',
-					new Date().toLocaleDateString(),
-					home.homeLayout
-				)}
-			{/each} -->
 				{@render ListLocal()}
 			</div>
 		{:else}
-			<!-- 2 cards column -->
 			<div in:fly={{ y: -20 }} class="grid grid-cols-2 gap-3">
 				{@render ListLocal()}
 			</div>
@@ -86,45 +84,65 @@
 
 {#snippet Card(
 	img?: string,
-	h6?: string,
 	h1?: string,
 	p?: string,
 	fL?: string,
 	fR?: string,
 	full?: boolean,
-	id?: number,
 	item?: any
 )}
 	<div
-		class="card-link bg-primary-900/30 card border-surface-200-800 card-hover divide-surface-200-800 block divide-y border-[2px] shadow-lg"
+		class="card-link bg-primary-900/30 card border-surface-200-800 card-hover divide-surface-200-800 block divide-y border-[2px] shadow-lg {home.selectMode ? 'cursor-pointer' : ''} {home.selectMode && home.selectedTitles.includes(item.title) ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-transparent shadow-lg shadow-primary-500/20' : ''} transition-all duration-200 relative"
 	>
+		{#if home.selectMode && home.selectedTitles.includes(item.title)}
+			<div class="pointer-events-none absolute inset-0 z-10 bg-primary-500/20"></div>
+		{/if}
 		{#if full}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="">
+			<div class="transition-all duration-200">
+				{#if home.selectMode}
+					<div
+						class="absolute top-2 right-2 z-20"
+						onclick={(e) => {
+							e.stopPropagation();
+							handleCardClick(item);
+						}}
+					>
+						{#if home.selectedTitles.includes(item.title)}
+							<CheckSquare class="size-6 text-primary-400 drop-shadow-md" />
+						{:else}
+							<Square class="size-6 text-white/60" />
+						{/if}
+					</div>
+				{/if}
 				<div
 					class="card border-surface-200-800/0 card-hover absolute m-2 block h-fit w-full rounded-xl"
 				>
 					<DropDown data={item} />
 				</div>
-				{#if item.url !== ''}
+				{#if item.url !== '' && !home.selectMode}
 					<!-- svelte-ignore node_invalid_placement_ssr -->
 					<a
 						href={item.url}
 						target="_blank"
-						class="  absolute right-3 mt-2 rounded-full bg-black/30 text-white mix-blend-difference"
+						class="absolute right-3 mt-2 rounded-full bg-black/30 text-white mix-blend-difference"
+						onclick={(e) => e.stopPropagation()}
 						><Link class="text-primary-200 size-7 p-1" /></a
 					>
 				{/if}
 				<a
-					onclick={() => CardPage(item.title, item.img, item.link, item.text, item.date, item.url)}
-					href="/card"
+					onclick={(e) => {
+						if (home.selectMode) { e.preventDefault(); handleCardClick(item); return; }
+						handleCardClick(item);
+					}}
+					href={home.selectMode ? '' : '/card'}
 				>
 					<header>
 						<Image
 							src={img}
 							onerror={imgError}
-							class=" aspect-video w-full rounded-t-xl object-cover"
+							class="aspect-video w-full rounded-t-xl object-cover"
 							alt={NoImageUrl}
 						/>
 					</header>
@@ -132,7 +150,7 @@
 						<div>
 							<p class="p">{h1}</p>
 						</div>
-						<small class="line-clamp-2 opacity-60">{p}</small>
+						<small class="line-clamp-2 break-words opacity-60">{p}</small>
 					</article>
 					<hr class="hr" />
 					<footer
@@ -145,74 +163,152 @@
 			</div>
 		{:else}
 			<div
-				class=" card border-surface-200-800/0 card-hover relative block h-fit w-full rounded-xl border-[0.5px]"
+				class="card border-surface-200-800/0 card-hover relative block h-fit w-full rounded-xl border-[0.5px] transition-all duration-200"
 			>
 				<div class="absolute m-1">
 					<DropDown data={item} />
 				</div>
-				<!-- svelte-ignore node_invalid_placement_ssr -->
-				{#if item.url !== ''}
+				{#if home.selectMode}
+					<div
+						class="absolute top-1 right-1 z-20"
+						onclick={(e) => {
+							e.stopPropagation();
+							handleCardClick(item);
+						}}
+					>
+						{#if home.selectedTitles.includes(item.title)}
+							<CheckSquare class="size-5 text-primary-400 drop-shadow-md" />
+						{:else}
+							<Square class="size-5 text-white/60" />
+						{/if}
+					</div>
+				{/if}
+				{#if item.url !== '' && !home.selectMode}
+					<!-- svelte-ignore node_invalid_placement_ssr -->
 					<a
 						href={item.url}
 						target="_blank"
-						class=" absolute right-1 mt-1 rounded-full mix-blend-difference"
-						><Link class=" text-primary-200 size-6 p-1" /></a
+						class="absolute right-1 mt-1 rounded-full mix-blend-difference"
+						onclick={(e) => e.stopPropagation()}
+						><Link class="text-primary-200 size-6 p-1" /></a
 					>
 				{/if}
 				<a
-					onclick={() => CardPage(item.title, item.img, item.link, item.text, item.date, item.url)}
-					href="/card"
+					onclick={(e) => {
+						if (home.selectMode) { e.preventDefault(); handleCardClick(item); return; }
+						handleCardClick(item);
+					}}
+					href={home.selectMode ? '' : '/card'}
 				>
 					{#if img}
-						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<Image
 							src={img}
 							class="aspect-video w-full rounded-t-lg object-cover"
 							onerror={imgError}
 							alt="card-preview"
-							onclick={() => {}}
 						/>
 					{/if}
 
-					<article class=" h-full items-stretch justify-between pl-1 shadow-none">
+					<article class="h-full items-stretch justify-between pl-1 shadow-none">
 						<span class="text-surface-50 flex flex-col justify-center -space-y-1">
-							<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-							<!-- svelte-ignore a11y_click_events_have_key_events -->
-							<p onclick={() => {}} class="text-md truncate pb-1 font-mono font-bold">
+							<p class="text-md truncate pb-1 font-mono font-bold">
 								{h1}
 							</p>
 							<small class="truncate font-mono text-xs">{fL}</small>
 						</span>
-
-						<!-- <small class="text-justify opacity-60">{p}</small> -->
 					</article>
 				</a>
-				<!-- <footer class="flex items-center justify-between gap-4 p-4">
-    <small class="opacity-60">On {fR}</small>
-    </footer> -->
 			</div>
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet ListLocal()}
-	{#each [...localItems.current].reverse() as item, index}
-		{#if index < 8}
-			{@render Card(
-				item.img,
-				'',
-				item.title,
-				item.text,
-				item.link,
-				new Date().toLocaleDateString(),
-				home.homeLayout,
-				index,
-				item
-			)}
-		{/if}
+	{#each visibleItems as item}
+		{@render Card(
+			item.img,
+			item.title,
+			item.text,
+			item.link,
+			new Date().toLocaleDateString(),
+			home.homeLayout,
+			item
+		)}
 	{/each}
 {/snippet}
+
+{#if home.selectMode}
+	<div
+		in:fly={{ y: 40, duration: 200 }}
+		class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-black/80 px-4 py-3 shadow-2xl backdrop-blur-xl border border-white/10"
+	>
+		<button
+			class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
+			onclick={toggleSelectAll}
+		>
+			{#if visibleItems.every((item: any) => home.selectedTitles.includes(item.title))}
+				<CheckSquare class="size-4" />
+				Deselect All
+			{:else}
+				<Square class="size-4" />
+				Select All
+			{/if}
+		</button>
+		<span class="h-6 w-px bg-white/10"></span>
+		<span class="px-2 text-sm font-bold text-white/80">{home.selectedTitles.length} selected</span>
+		{#if home.selectedTitles.length > 0}
+			<button
+				class="flex items-center gap-1.5 rounded-xl bg-red-500 px-3 py-1.5 text-xs font-bold text-white transition-colors duration-200 hover:bg-red-400"
+				onclick={() => {
+					confirmState.open = true;
+					confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
+					confirmState.message = 'This will remove them from all spaces too';
+					confirmState.confirmText = 'Delete All';
+					confirmState.onConfirm = () => {
+						let titles = home.selectedTitles;
+						const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
+						const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+						for (const spc of localSpaces.current) {
+							const matching = spc.items.filter((i: any) => titles.includes(i.title));
+							if (matching.length > 0) {
+								spaceMappings.push({ spaceName: spc.name, items: matching });
+							}
+						}
+						let tempArr = localItems.current.filter(
+							(item: any) => !titles.includes(item.title)
+						);
+						localItems.current = tempArr;
+						localSpaces.current.forEach((spc: any) => {
+							spc.items = spc.items.filter(
+								(item: any) => !titles.includes(item.title)
+							);
+						});
+						home.selectedTitles = [];
+						home.selectMode = false;
+						const msg = titles.length + ' items Deleted';
+						setUndo(msg, deletedItems, spaceMappings);
+						toast.success(msg, {
+							style: 'border-radius: 200px; background: #333; color: #fff;',
+							duration: 2000
+						});
+					};
+				}}
+			>
+				<Trash2 class="size-4" />
+				Delete
+			</button>
+			<button
+				class="rounded-xl px-3 py-1.5 text-xs font-bold text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
+				onclick={() => {
+					home.selectedTitles = [];
+					home.selectMode = false;
+				}}
+			>
+				Cancel
+			</button>
+		{/if}
+	</div>
+{/if}
 
 <div
 	in:fly={{ delay: 0, x: -100 }}

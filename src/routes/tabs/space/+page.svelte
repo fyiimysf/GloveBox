@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Cards from '$lib/components/Cards.svelte';
-	import { cardPage, home, localSpaces, space, spaceview } from '$lib/shared.svelte';
+	import { cardPage, home, localSpaces, space, spaceview, confirmState, saveSpaceviewName } from '$lib/shared.svelte';
 	import { CircleX, Currency } from '@lucide/svelte';
 	import { Segment } from '@skeletonlabs/skeleton-svelte';
 	import {
@@ -56,6 +56,7 @@
 					spaceview.pageTitle = spaceItem.name;
 					spaceview.clr = spaceItem.clr;
 					spaceview.viewItems = spaceItem.items;
+					saveSpaceviewName(spaceItem.name);
 					if (spaceItem.items.length < 1) {
 						emptyToast();
 					}
@@ -73,16 +74,21 @@
 							<CircleX
 								class="size-8 text-red-400"
 								onclick={() => {
-									let tempArr = localSpaces.current.filter(
-										(item: any) => item.name !== spaceItem.name
-									);
-									localSpaces.current = tempArr;
-									console.log(localSpaces.current);
-									toast(spaceItem.name + ' Deleted', {
-										icon: '🗑️',
-										style: ' border-radius: 200px; background: #333; color: #fff;',
-										duration: 3000
-									});
+									confirmState.open = true;
+									confirmState.title = 'Delete Space?';
+									confirmState.message = spaceItem.name;
+									confirmState.confirmText = 'Delete';
+									confirmState.onConfirm = () => {
+										let tempArr = localSpaces.current.filter(
+											(item: any) => item.name !== spaceItem.name
+										);
+										localSpaces.current = tempArr;
+										toast(spaceItem.name + ' Deleted', {
+											icon: '🗑️',
+											style: ' border-radius: 200px; background: #333; color: #fff;',
+											duration: 3000
+										});
+									};
 								}}
 							/>
 						{:else if spaceItem.items.length > 0}

@@ -32,8 +32,10 @@
 		Link2,
 		User,
 		CircleUser,
-		CircleDotDashed,
+		SquareStack,
 		CircleOff,
+		CircleDotDashed,
+		Check,
 		Clipboard
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
@@ -47,11 +49,18 @@
 		first,
 		spaceview,
 		data_theme,
-		shareTarget
+		shareTarget,
+		confirmState,
+		undoState,
+		performUndo,
+		truncate,
+		setUndo,
+		setUndoRemove
 	} from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
-	let openPopup = $state(false);
+	let navbarExpanded = $state(false);
+	let touchStartY = $state(0);
 	onMount(() => {
 		if (page.route.id === '/') {
 			goto('/tabs/home');
@@ -65,10 +74,12 @@
 	});
 	$effect(() => {
 		document.documentElement.setAttribute('data-theme', data_theme.current.value);
-		// console.log('Navigation value:', home.pageTitle);
-		// console.log(home.homeLayout);
 		if (page.route.id == '/tabs/space') {
 			home.spaceDelete = false;
+		}
+		if (page.route.id !== '/tabs/home' && page.route.id !== '/tabs/home/saved' && page.route.id !== '/tabs/space/spaceview') {
+			home.selectMode = false;
+			home.selectedTitles = [];
 		}
 	});
 
@@ -89,7 +100,7 @@
 			if (shareTarget.current.title && !shareTarget.current.title.startsWith('http')) {
 				sharedItem.title = shareTarget.current.title;
 			}
-			openPopup = true;
+			navbarExpanded = true;
 			shareTarget.current = null;
 		}
 	});
@@ -169,9 +180,25 @@
 	//DropDown
 	let dropMenu = $state(false);
 	let spaceMenu = $state(false);
+	function closeExpanded() {
+		navbarExpanded = false;
+		space.clr = 'purple';
+		space.name = space.desc = '';
+		chipName = '';
+		sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = url = '';
+	}
+	function handleTouchStart(e: TouchEvent) {
+		touchStartY = e.touches[0].clientY;
+	}
+	function handleTouchEnd(e: TouchEvent) {
+		const dy = e.changedTouches[0].clientY - touchStartY;
+		const target = e.currentTarget as HTMLElement;
+		if (dy > 50 && target.scrollTop === 0) closeExpanded();
+	}
 </script>
 
-<div class="grid h-screen w-screen grid-rows-[auto_1fr_auto] select-none">
+<div class="flex justify-center w-screen">
+	<div class="grid h-screen w-full lg:max-w-[480px] grid-rows-[auto_1fr_auto] select-none">
 	<!-- Header -->
 	<header in:slide class="sticky top-0 z-10 backdrop-blur-xl">
 		<!-- <AppBarC title={value} {homeLayout}></AppBarC> -->
@@ -235,79 +262,127 @@
 	</main>
 
 	<Toaster />
-	<!-- PopUp -->
-	<!-- <div>
-		{#if page.route.id !== '/settings' && openPopup}
-			{@render PopUp()}
-		{/if}
-	</div> -->
-	<!-- Footer -->
-	<!-- Component -->
-	{#if (page.route.id === '/tabs/home' || page.route.id === '/tabs/space') && !first.current}
-		<div transition:slide|global class="fixed right-4 bottom-5 left-4 z-11">
-			<Navigation.Bar
-				classes="bg-black/50 backdrop-blur-xl rounded-3xl border-2 border-primary-500/30"
-				value={home.pageTitle}
-				onValueChange={(newValue) => {
-					home.pageTitle = newValue;
-				}}
-			>
-				<Navigation.Tile
-					active=" bg-primary-800/50 text-primary-200 "
-					rounded="rounded-2xl rounded-r-lg"
-					href="/tabs/home/"
-					id="Home"
-					label="Home"><Home /></Navigation.Tile
-				>
 
-				<div class="px-1">
-					<button
-						type="button"
-						class="btn-icon bg-primary-400 z-20 h-12.5 w-12 rounded-lg px-4"
-						onclick={() => {
-							url =
-								sharedItem.img =
-								sharedItem.link =
-								sharedItem.text =
-								sharedItem.title =
-								sharedItem.url =
-									'';
-							chipName = '';
-							openPopup = true;
-						}}
-					>
-						<Plus class="text-black" />
-					</button>
-				</div>
-
-				<Navigation.Tile
-					active=" bg-primary-800/50 text-primary-200 "
-					rounded="rounded-2xl rounded-l-lg"
-					href="/tabs/space/"
-					id="Space"
-					label="Space"><CircleDashed /></Navigation.Tile
-				>
-			</Navigation.Bar>
-		</div>
-	{/if}
-	<!-- PopUp -->
-	{#if page.route.id !== '/settings' && openPopup}
+	{#if undoState.pending}
 		<div
-			class="fixed inset-0 z-100 flex items-center justify-center bg-black/40 p-2 backdrop-blur-sm"
+			in:fly={{ y: 40, duration: 200 }}
+			class="fixed bottom-26 left-1/2 z-50 flex w-full max-w-sm -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
 		>
-			{@render PopUpCard()}
+			<span class="font-semibold text-white drop-shadow-sm">{undoState.message}</span>
 			<button
-				class="btn fixed bottom-10 w-80 py-2 text-white"
-				aria-label="title"
-				onclick={() => {
-					openPopup = false;
-					space.clr = 'purple';
-				}}
+				class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition-all duration-200 hover:bg-primary-400 hover:shadow-primary-400/40 active:scale-95"
+				onclick={performUndo}
 			>
-				Cancel
+				Undo
 			</button>
 		</div>
 	{/if}
+
+	{#if dropMenu || spaceMenu}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="fixed inset-0 z-40" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
+		<div
+			transition:fly={{ y: 100, duration: 200 }}
+			class="fixed bottom-0 z-50 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] rounded-t-4xl bg-primary-900/70 px-6 pb-10 pt-4 shadow-2xl backdrop-blur-xl border-t border-white/10"
+		>
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div class="mx-auto mb-4 h-1.5 w-12 rounded-full bg-white/70" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
+			{@render CardDropDown()}
+		</div>
+	{/if}
+	<!-- Morphing Navbar -->
+	{#if (page.route.id === '/tabs/home' || page.route.id === '/tabs/space') && !first.current && !(page.route.id === '/tabs/home' && home.selectMode)}
+		{#if navbarExpanded}
+			<div
+				transition:blur={{ duration: 200 }}
+				class="fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
+				onclick={closeExpanded}
+			></div>
+		{/if}
+		<div transition:slide|global class="fixed bottom-5 z-11 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] px-4">
+			<div
+				class="rounded-3xl border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
+			>
+				<div class="h-20 relative overflow-hidden">
+					<div
+						class="absolute inset-0 transition-all duration-300 ease-out"
+						class:opacity-0={navbarExpanded}
+						class:opacity-100={!navbarExpanded}
+						style={navbarExpanded ? 'pointer-events: none;' : ''}
+					>
+						<Navigation.Bar
+							classes="bg-transparent"
+							value={page.route.id.startsWith('/tabs/home') ? 'Home' : 'Space'}
+							onValueChange={(newValue) => {
+								home.pageTitle = newValue;
+							}}
+						>
+							<Navigation.Tile
+								active=" bg-primary-800/50 text-primary-200 "
+								rounded="rounded-2xl rounded-r-lg"
+								href="/tabs/home/"
+								id="Home"
+								label="Home"><Home /></Navigation.Tile
+							>
+
+							<div class="px-1">
+								<button
+									type="button"
+									class="btn-icon bg-primary-400 z-20 h-12 w-10 rounded-lg px-6 "
+									onclick={() => {
+										url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
+										chipName = '';
+										navbarExpanded = true;
+									}}
+								>
+									<Plus class="text-black" />
+								</button>
+							</div>
+
+							<Navigation.Tile
+								active=" bg-primary-800/50 text-primary-200 "
+								rounded="rounded-2xl rounded-l-lg"
+								href="/tabs/space/"
+								id="Space"
+								label="Space"><CircleDashed /></Navigation.Tile
+							>
+						</Navigation.Bar>
+					</div>
+					<div
+						class="absolute inset-0 flex items-center gap-3 px-6 transition-all duration-300 ease-out"
+						class:opacity-0={!navbarExpanded}
+						class:opacity-100={navbarExpanded}
+						style={!navbarExpanded ? 'pointer-events: none;' : ''}
+					>
+						<a
+							href="/tabs/home/"
+							class="flex-1 rounded-lg py-2 text-center text-sm font-bold transition-colors duration-200 {page.route.id.startsWith('/tabs/home') ? 'bg-primary-800/50 text-primary-200' : 'text-white/70 hover:text-white'}"
+						>Home</a>
+						<a
+							href="/tabs/space/"
+							class="flex-1 rounded-lg py-2 text-center text-sm font-bold transition-colors duration-200 {page.route.id.startsWith('/tabs/space') ? 'bg-primary-800/50 text-primary-200' : 'text-white/70 hover:text-white'}"
+						>Space</a>
+					</div>
+				</div>
+				{#if navbarExpanded}
+					<div transition:slide={{ duration: 400 }} ontouchstart={handleTouchStart} ontouchend={handleTouchEnd} class="max-h-[calc(100dvh-7rem)] overflow-y-auto">
+						{@render PopUpCard()}
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
+	{#if confirmState.open}
+		<div
+			transition:fade={{duration:200}}
+			class="fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-md"
+		>
+			{@render ConfirmDialogue()}
+		</div>
+	{/if}
+</div>
 </div>
 
 {#snippet Appbar(title: string, children: any)}
@@ -404,6 +479,13 @@
 					{@render children()}
 				{/if}
 				{#if page.route.id === '/tabs/home'}
+					<SquareStack
+						class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
+						onclick={() => {
+							home.selectMode = !home.selectMode;
+							if (!home.selectMode) home.selectedTitles = [];
+						}}
+					/>
 					<a href="/settings">
 						<Bolt class="size-7" />
 					</a>
@@ -441,7 +523,7 @@
 						<CircleUser
 							class="size-7"
 							onclick={() => {
-								window.open('https://fyiimysf.pages.dev', '_blank');
+								window.open('https://mysf.pages.dev', '_blank');
 							}}
 						/>
 					</a>
@@ -470,6 +552,13 @@
 					</button>
 				{/if}
 				{#if page.route.id === '/tabs/home/saved'}
+					<SquareStack
+						class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
+						onclick={() => {
+							home.selectMode = !home.selectMode;
+							if (!home.selectMode) home.selectedTitles = [];
+						}}
+					/>
 					{#if home.savedLayout}
 						<StretchHorizontal
 							onclick={() => {
@@ -486,9 +575,20 @@
 						/>
 					{/if}
 				{:else if page.route.id === '/tabs/space/spaceview'}
+					<SquareStack
+						class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
+						onclick={() => {
+							home.selectMode = !home.selectMode;
+							if (!home.selectMode) home.selectedTitles = [];
+						}}
+					/>
 					<Trash
 						onclick={() => {
-							try {
+							confirmState.open = true;
+							confirmState.title = 'Delete Space?';
+							confirmState.message = spaceview.pageTitle + ' will be permanently deleted';
+							confirmState.confirmText = 'Delete';
+							confirmState.onConfirm = () => {
 								localSpaces.current.forEach((spc: any) => {
 									if (spc.name === spaceview.pageTitle) {
 										let tempArr = localSpaces.current.filter(
@@ -497,18 +597,12 @@
 										localSpaces.current = tempArr;
 									}
 								});
-								toast.success('Space Cleared', {
+								toast.success('Space Deleted', {
 									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
+									duration: 2000
 								});
 								history.back();
-							} catch (e) {
-								toast.error('Space Cleared', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-								console.log('Error removing item from local storage:', e);
-							}
+							};
 						}}
 						class="size-7"
 					/>
@@ -530,144 +624,118 @@
 				{/if}
 			{/snippet}
 		</AppBar>
-		{#if dropMenu || spaceMenu}
-			<div class="fixed top-15 right-4 z-12 flex justify-end">
-				{@render CardDropDown()}
-			</div>
-		{/if}
 	</div>
 {/snippet}
 
 {#snippet PopUpCard()}
-	<!-- Home Page PopUp Card -->
-	<div class="absolute inset-0 bg-black/30"></div>
-	<div
-		transition:fly={{ y: 100, duration: 200 }}
-		class="card bg-surface-900/90 right-0 bottom-0 left-0 z-200 m-4 w-full p-3 backdrop-blur-xl"
-	>
-		{#if page.route.id === '/tabs/home'}
-			<form onsubmit={handleSubmit} class="space-y-3">
-				<header class="flex justify-between">
-					<p class="text-xl font-bold">Add Item</p>
-					<button
-						class="btn-icon badge preset-filled hover:preset-tonal rounded-full"
-						onclick={() => {
-							openPopup = !openPopup;
-							chipName = '';
-						}}><X /></button
+	{#if page.route.id === '/tabs/home'}
+		<div class="px-3 pb-4">
+			<hr class="hr" />
+			<form onsubmit={handleSubmit} class="space-y-4 pt-2">
+				<div>
+					<label for="item-title" class="block pb-0.5 text-sm font-medium text-surface-300"
+						>Title</label
 					>
-				</header>
-				<hr class="hr" />
-				<div class="input-group grid-cols-auto relative">
-					<input
-						form="input[]"
-						class="ig-input bg-primary-500/20 overflow-x-auto"
-						bind:value={sharedItem.title}
-						type="text"
-						required
-						placeholder="Title *"
-					/>
-					{#if sharedItem.title.length > 0}
-						<X
-							onclick={() => {
-								sharedItem.title = '';
-							}}
-							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
+					<div class="input-group grid-cols-auto relative">
+						<input
+							id="item-title"
+							form="input[]"
+							class="ig-input bg-primary-500/20 overflow-x-auto focus:ring-2 focus:ring-primary-400"
+							bind:value={sharedItem.title}
+							type="text"
+							required
+							placeholder="e.g. My Awesome Link"
 						/>
-					{:else}
-						<Info
-							onclick={() => {
-								toast('Required to add a Title', {
-									icon: '⚠️',
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 2000
-								});
-							}}
-							class=" text-primary-200/30 absolute right-0 m-2 "
-						/>
-					{/if}
+						{#if sharedItem.title.length > 0}
+							<X
+								onclick={() => {
+									sharedItem.title = '';
+								}}
+								class="absolute right-0 m-2 size-5 cursor-pointer text-surface-400 hover:text-surface-200"
+							/>
+						{/if}
+					</div>
 				</div>
 
-				<div class="relative">
-					{#if sharedItem.text.length > 0}
-						<X
-							onclick={() => {
-								sharedItem.text = '';
-							}}
-							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
-						/>
-					{:else}
-						<Info
-							onclick={() => {
-								toast('Required to add a Description', {
-									icon: '⚠️',
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 2000
-								});
-							}}
-							class=" text-primary-200/30 absolute right-0 m-2 "
-						/>
-					{/if}
-					<textarea
-						class="input-group bg-primary-500/20 ig-input w-full overflow-y-auto"
-						rows="3"
-						placeholder="Description *"
-						bind:value={sharedItem.text}
-					></textarea>
+				<div>
+					<label for="item-desc" class="block pb-0.5 text-sm font-medium text-surface-300"
+						>Description</label
+					>
+					<div class="relative">
+						{#if sharedItem.text.length > 0}
+							<X
+								onclick={() => {
+									sharedItem.text = '';
+								}}
+								class="absolute right-2 top-2 z-10 size-5 cursor-pointer text-surface-400 hover:text-surface-200"
+							/>
+						{/if}
+						<textarea
+							id="item-desc"
+							class="input-group bg-primary-500/20 ig-input w-full overflow-y-auto focus:ring-2 focus:ring-primary-400"
+							rows="3"
+							placeholder="Describe this item..."
+							bind:value={sharedItem.text}
+						></textarea>
+					</div>
 				</div>
 				{@render Fileupload()}
 
-				<span class="flex justify-center">OR</span>
+				<div class="flex items-center gap-3 py-1">
+					<span class="h-px flex-1 bg-surface-600/30"></span>
+					<span class="text-xs font-medium uppercase tracking-wider text-surface-400"
+						>Or paste a link</span
+					>
+					<span class="h-px flex-1 bg-surface-600/30"></span>
+				</div>
 
-				<div class="input-group bg-primary-500/20 relative grid-cols-[auto_1fr]">
-					<div class=" ig-cell preset-tonal w-fit">
-						<Link
-							class="h-4 w-4"
-							onclick={() => {
-								url = 'https://';
-							}}
+				<div>
+					<label for="item-url" class="block pb-0.5 text-sm font-medium text-surface-300"
+						>URL</label
+					>
+					<div
+						class="input-group bg-primary-500/20 relative grid-cols-[auto_1fr] focus-within:ring-2 focus-within:ring-primary-400"
+					>
+						<div class="ig-cell preset-tonal w-fit">
+							<Link
+								class="h-4 w-4"
+								onclick={() => {
+									url = 'https://';
+								}}
+							/>
+						</div>
+						<input
+							id="item-url"
+							class="ig-input"
+							bind:value={url}
+							oninput={handleSubmit}
+							type="url"
+							placeholder="https://www.example.com"
 						/>
+						{#if url.length > 0}
+							<X
+								onclick={() => {
+									url = '';
+								}}
+								class="absolute right-0 m-2 size-5 cursor-pointer text-surface-400 hover:text-surface-200"
+							/>
+						{:else}
+							<Clipboard
+								onclick={() => {
+									navigator.clipboard
+										.readText()
+										.then((text) => {
+											url = text;
+											handleSubmit();
+										})
+										.catch((err) => {
+											console.error('Failed to read clipboard: ', err);
+										});
+								}}
+								class="absolute right-0 m-2 size-5 cursor-pointer text-primary-300 hover:text-primary-200"
+							/>
+						{/if}
 					</div>
-					<input
-						class="ig-input"
-						bind:value={url}
-						oninput={handleSubmit}
-						type="url"
-						placeholder="https://www.example.com"
-					/>
-					{#if url.length > 0}
-						<X
-							onclick={() => {
-								url = '';
-							}}
-							class=" text-surface-200/30 bg-surface-900/80 absolute right-0 m-2 rounded-full "
-						/>
-					{:else}
-						<!-- <Info
-							onclick={() => {
-								toast('Required to add a URL', {
-									icon: '⚠️',
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 2000
-								});
-							}}
-							class=" text-primary-200/30 absolute right-0 m-2 "
-						/> -->
-						<Clipboard
-							onclick={() => {
-								navigator.clipboard
-									.readText()
-									.then((text) => {
-										url = text;
-										handleSubmit();
-									})
-									.catch((err) => {
-										console.error('Failed to read clipboard: ', err);
-									});
-							}}
-							class=" text-primary-200/30 absolute right-0 m-2 "
-						/>
-					{/if}
 				</div>
 				<hr class="hr" />
 				{#if localSpaces.current.length > 0}
@@ -699,8 +767,6 @@
 						<button
 							onclick={() => {
 								goto('/tabs/space');
-								// space.clr = 'purple';
-								// space.name = space.desc = '';
 								home.pageTitle = 'Space';
 							}}
 							type="button"
@@ -716,23 +782,18 @@
 						class="btn {loading ||
 						(url === '' && (sharedItem.title === '' || sharedItem.text === ''))
 							? 'opacity-50'
-							: 'opacity-100'} preset-filled w-full p-3"
+							: 'opacity-100'} preset-filled w-full rounded-xl p-3 font-medium"
 						onclick={() => {
 							if (url !== '' && ogData) {
 								if (ogData.image === '') {
 									sharedItem.img = noImageUrl;
 								} else {
-									// console.log(imageToBase64(ogData.image))
 									sharedItem.img = ogData.image;
 								}
 								if (ogData) {
-									// sharedItem.title = ogData.title;
-									// sharedItem.text = ogData.description;
-									// sharedItem.link = ogData.siteName;
-									// sharedItem.url = url;
 									localItems.current.push(sharedItem);
 									addItemToSpace(sharedItem);
-									openPopup = false;
+									navbarExpanded = false;
 									url =
 										sharedItem.img =
 										sharedItem.link =
@@ -752,7 +813,7 @@
 								}
 								localItems.current.push(sharedItem);
 								addItemToSpace(sharedItem);
-								openPopup = false;
+								navbarExpanded = false;
 								toast.success('Item Added', {
 									style: 'border-radius: 200px; background: #333; color: #fff;',
 									duration: 1500
@@ -785,117 +846,86 @@
 						{/if}
 					</button>
 				</article>
+				<button
+					type="button"
+					class="w-full py-1 text-sm text-white/50 hover:text-white/80 transition-colors"
+					onclick={closeExpanded}>Cancel</button>
 			</form>
+		</div>
 		{:else if page.route.id === '/tabs/space'}
-			<!-- Space page PopUp Card -->
-			<form class="space-y-3">
-				<header class="flex justify-between">
-					<p class="text-xl font-bold">Add Space</p>
-					<button
-						class="btn-icon badge preset-filled hover:preset-tonal rounded-full"
-						onclick={() => {
-							openPopup = !openPopup;
-							space.clr = 'purple';
-							space.name = space.desc = '';
-						}}><X /></button
-					>
-				</header>
+			<div class="px-3 pb-4">
 				<hr class="hr" />
-				<div class="input-group grid-cols-auto">
-					<input
-						form="input[]"
-						class="ig-input bg-primary-500/20"
-						bind:value={space.name}
-						type="text"
-						required
-						placeholder="Name*"
-					/>
-				</div>
-				<textarea
-					class="input-group bg-primary-500/20 ig-input w-full"
-					rows="3"
-					placeholder="Detail."
-					bind:value={space.desc}
-				></textarea>
+				<form class="space-y-4 pt-2">
+					<div>
+						<label for="space-name" class="block pb-0.5 text-sm font-medium text-surface-300"
+							>Space Name</label
+						>
+						<div class="input-group grid-cols-auto">
+							<input
+								id="space-name"
+								form="input[]"
+								class="ig-input bg-primary-500/20 focus:ring-2 focus:ring-primary-400"
+								bind:value={space.name}
+								type="text"
+								required
+								placeholder="e.g. Design Resources"
+							/>
+						</div>
+					</div>
+					<div>
+						<label for="space-desc" class="block pb-0.5 text-sm font-medium text-surface-300"
+							>Description</label
+						>
+						<textarea
+							id="space-desc"
+							class="input-group bg-primary-500/20 ig-input w-full focus:ring-2 focus:ring-primary-400"
+							rows="3"
+							placeholder="What's this space about?"
+							bind:value={space.desc}
+						></textarea>
+					</div>
 
-				<p class="text-sm font-light">Select Space colour</p>
-				<ColorGroup />
-				<article>
-					<button
-						type="submit"
-						class="btn preset-filled w-full bg-{space.clr}-400 p-3"
-						onclick={() => {
-							if (space.name !== '') {
-								if (!localSpaces.current.find((spc: any) => spc.name === space.name)) {
-									console.log('space added: ' + space.name);
-									localSpaces.current.push(space);
-									openPopup = !openPopup;
-									toast.success('Space "' + space.name + '" Created', {
-										style: 'border-radius: 200px; background: #333; color: #fff;',
-										duration: 1500
-									});
-									space.clr = 'purple';
-									space.name = space.desc = '';
+					<p class="text-sm font-medium text-surface-300">Colour</p>
+					<ColorGroup />
+					<article>
+						<button
+							type="submit"
+							class="btn preset-filled w-full rounded-xl bg-{space.clr}-400 p-3 font-medium"
+							onclick={() => {
+								if (space.name !== '') {
+									if (!localSpaces.current.find((spc: any) => spc.name === space.name)) {
+										console.log('space added: ' + space.name);
+										localSpaces.current.push(space);
+										navbarExpanded = !navbarExpanded;
+										toast.success('Space "' + space.name + '" Created', {
+											style: 'border-radius: 200px; background: #333; color: #fff;',
+											duration: 1500
+										});
+										space.clr = 'purple';
+										space.name = space.desc = '';
+									} else {
+										toast.error('Space "' + space.name + '" already exists', {
+											style: 'border-radius: 200px; background: #333; color: #fff;',
+											duration: 1500
+										});
+									}
 								} else {
-									toast.error('Space "' + space.name + '" already exists', {
+									console.log('Important Fields Empty in Spaces');
+									toast.error('Important fields are missing', {
 										style: 'border-radius: 200px; background: #333; color: #fff;',
 										duration: 1500
 									});
 								}
-							} else {
-								console.log('Important Fields Empty in Spaces');
-								toast.error('Important fields are missing', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-							}
-						}}>Add Space</button
-					>
-				</article>
-			</form>
+							}}>Add Space</button>
+					</article>
+					<button
+						type="button"
+						class="w-full py-1 text-sm text-white/50 hover:text-white/80 transition-colors"
+						onclick={closeExpanded}>Cancel</button>
+				</form>
+			</div>
 		{/if}
-	</div>
 {/snippet}
-
-<!-- {#snippet PopUp()}
-	<Popover
-		classes=" "
-		open={openPopup}
-		onOpenChange={(e) => (openPopup = e.open)}
-		positioning={{ placement: 'top', offset: { mainAxis: 45 } }}
-		triggerBase="btn "
-		contentBase="card bg-surface-900/60 backdrop-blur-xl p-4 space-y-4 max-w-[360px]"
-		arrow
-		arrowBackground="!bg-surface-200 dark:!bg-surface-800"
-	>
-		{#snippet trigger()}{/snippet}
-		{#snippet content()}
-			<header class="flex justify-between">
-				<p class="text-xl font-bold">Add Item</p>
-				<button
-					class="btn-icon hover:preset-tonal"
-					onclick={() => {
-						openPopup = !openPopup
-					}}><X /></button
-				>
-			</header>
-			<div class="input-group grid-cols-auto">
-				<input class="ig-input" type="text" placeholder="Title" />
-			</div>
-			{@render Fileupload()}
-			<div class="input-group grid-cols-[auto_1fr]">
-				<div class="ig-cell preset-tonal w-fit">
-					<Icon icon="lucide:link" class="h-4 w-4" />
-				</div>
-				<input class="ig-input" type="text" placeholder="www.example.com" />
-			</div>
-
-			<article>
-				<button type="button" class="btn preset-filled w-full p-3">Add Item</button>
-			</article>
-		{/snippet}
-	</Popover>
-{/snippet} -->
 
 {#snippet Fileupload()}
 	<div class="">
@@ -928,111 +958,135 @@
 		</FileUpload>
 	</div>
 {/snippet}
-
-{#if dropMenu || spaceMenu}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		out:blur={{ duration: 300 }}
-		onclick={() => {
-			dropMenu = false;
-			spaceMenu = false;
-		}}
-		class="fixed inset-0 z-9 bg-black/30 backdrop-blur-xs"
-	></div>
-{/if}
 {#snippet CardDropDown()}
-	{#if dropMenu}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			transition:slide|global
-			id="dropdownDots"
-			onclick={() => {
-				dropMenu = !dropMenu;
-			}}
-			class="bg-primary-950/80 w-50 divide-y divide-white rounded-lg font-bold shadow-sm outline backdrop-blur-lg"
-		>
-			<div>
-				{#if cardPage.url !== ''}
-					<a target="_blank" href={cardPage.url} class="py-1">
-						<div class="block px-4 py-2 text-yellow-300 hover:bg-gray-100 dark:hover:bg-gray-600">
-							<span class="flex justify-between">
-								Open Link
-								<Link />
-							</span>
-						</div>
-					</a>
-				{/if}
-			</div>
+	<div class="divide-y divide-white/10 text-sm font-bold">
+		{#if cardPage.url !== ''}
+			<a target="_blank" href={cardPage.url}>
+				<div class="flex items-center justify-between px-2 py-4 text-yellow-300 transition-colors hover:text-yellow-200 active:scale-[0.98]">
+					<span>Open Link</span>
+					<Link class="size-4" />
+				</div>
+			</a>
+		{/if}
 
-			{#each localSpaces.current as spaceObj}
-				{#each spaceObj.items as obj}
-					<div class="py-2">
-						{#if obj.title === cardPage.title}
-							<div class="px-4">
-								<span
-									onclick={() => {
-										spaceObj.items.forEach((item: any) => {
-											if (item.title === cardPage.title) {
-												let tempArr2 = spaceObj.items.filter(
-													(item: any) => item.title !== cardPage.title
-												);
-												spaceObj.items = tempArr2;
-											}
-										});
-										spaceview.viewItems.forEach((item: any) => {
-											if (item.title === cardPage.title) {
-												let tempArr3 = spaceview.viewItems.filter(
-													(item: any) => item.title !== cardPage.title
-												);
-												spaceview.viewItems = tempArr3;
-											}
-										});
-										toast.success('Item Deleted from ' + spaceObj.name, {
-											style: 'border-radius: 200px; background: #333; color: #fff;',
-											duration: 1500
-										});
-									}}
-									class="flex justify-between text-{spaceObj.clr}-400"
-								>
-									<p class="w-30 truncate">
-										Delete From <br />{spaceObj.name}
-									</p>
-									<CircleOff />
-								</span>
-							</div>
+		{#each localSpaces.current as spaceObj}
+			{#each spaceObj.items as obj}
+				{#if obj.title === cardPage.title}
+					<div
+						onclick={(e) => {
+							e.stopPropagation();
+							dropMenu = false;
+							confirmState.open = true;
+							confirmState.title = 'Remove from ' + spaceObj.name + '?';
+							confirmState.message = cardPage.title;
+							confirmState.confirmText = 'Remove';
+							confirmState.onConfirm = () => {
+								const deletedItem = cardPage;
+								spaceObj.items.forEach((item: any) => {
+									if (item.title === cardPage.title) {
+										let tempArr2 = spaceObj.items.filter(
+											(item: any) => item.title !== cardPage.title
+										);
+										spaceObj.items = tempArr2;
+									}
+								});
+								spaceview.viewItems.forEach((item: any) => {
+									if (item.title === cardPage.title) {
+										let tempArr3 = spaceview.viewItems.filter(
+											(item: any) => item.title !== cardPage.title
+										);
+										spaceview.viewItems = tempArr3;
+									}
+								});
+								const msg = truncate(cardPage.title) + ' removed';
+								setUndoRemove(msg, [deletedItem], spaceObj.name);
+								toast.success(msg, {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 2000
+								});
+							};
+						}}
+						class="flex cursor-pointer items-center justify-between px-2 py-4 text-{spaceObj.clr}-400 transition-colors hover:text-{spaceObj.clr}-300 active:scale-[0.98]"
+					>
+						<span class="truncate">Delete From {spaceObj.name}</span>
+						<CircleOff class="size-4 shrink-0" />
+					</div>
+				{/if}
+			{/each}
+		{/each}
+
+		{#if spaceMenu}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div transition:slide|global>
+				<div
+					onclick={() => { spaceMenu = false; }}
+					class="flex cursor-pointer items-center gap-2 px-2 py-4 transition-colors hover:text-white active:scale-[0.98]"
+				>
+					<ArrowLeft class="size-4" />
+					<span>Back</span>
+				</div>
+				{#each [...localSpaces.current].reverse() as item}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						onclick={() => {
+							const isInSpace = item.items.some((i: any) => i.title === cardPage.title);
+							if (isInSpace) {
+								item.items = item.items.filter((i: any) => i.title !== cardPage.title);
+								toast.success('Item Removed from ' + item.name, {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							} else {
+								item.items.push(cardPage);
+								toast.success('Item Added to ' + item.name, {
+									style: 'border-radius: 200px; background: #333; color: #fff;',
+									duration: 1500
+								});
+							}
+							spaceMenu = false;
+						}}
+						class="flex cursor-pointer items-center justify-between px-2 py-3 transition-colors hover:text-white active:scale-[0.98]"
+					>
+						<span class="flex min-w-0 items-center gap-2 pr-2">
+							<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{item.clr}-400"></span>
+							<span class="truncate">{item.name}</span>
+						</span>
+						{#if item.items.some((i: any) => i.title === cardPage.title)}
+							<Check class="size-4 shrink-0 text-green-400" />
+						{:else}
+							<Plus class="size-4 shrink-0 text-white/50" />
 						{/if}
 					</div>
 				{/each}
-			{/each}
-
-			{#if localSpaces.current.length > 0}
-				<div class="py-2">
-					<div class="block px-4 py-1 hover:bg-gray-100 dark:hover:bg-gray-600">
-						<span
-							onclick={() => {
-								spaceMenu = true;
-
-								localSpaces.current.forEach((spc: any) => {
-									spc.items.forEach((item: any) => {
-										if (item.title === cardPage.title) {
-											let tempArr2 = spc.items.filter((item: any) => item.title !== cardPage.title);
-											spc.items = tempArr2;
-										}
-									});
-								});
-							}}
-							class="flex justify-between"
-						>
-							Add To Space
-							<CircleDashed />
-						</span>
-					</div>
-				</div>
-			{/if}
+			</div>
+		{:else if localSpaces.current.length > 0}
 			<div
-				onclick={() => {
+				onclick={() => { spaceMenu = true; }}
+				class="flex cursor-pointer items-center justify-between px-2 py-4 transition-colors hover:text-white active:scale-[0.98]"
+			>
+				<span>Add To Space</span>
+				<CircleDashed class="size-4" />
+			</div>
+		{/if}
+
+		<div
+			onclick={(e) => {
+				e.stopPropagation();
+				dropMenu = false;
+				confirmState.open = true;
+				confirmState.title = 'Delete Item?';
+				confirmState.message = cardPage.title;
+				confirmState.confirmText = 'Delete';
+				confirmState.onConfirm = () => {
+					const deletedItem = localItems.current.find((i: any) => i.title === cardPage.title);
+					const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+					for (const spc of localSpaces.current) {
+						if (spc.items.some((i: any) => i.title === cardPage.title)) {
+							spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
+						}
+					}
 					let tempArr = localItems.current.filter((item: any) => item.title !== cardPage.title);
 					localItems.current = tempArr;
 					localSpaces.current.forEach((spc: any) => {
@@ -1043,70 +1097,47 @@
 							}
 						});
 					});
-					console.log(localSpaces.current);
-					console.log(localItems.current);
-					toast.success('Item Deleted', {
+					const msg = truncate(cardPage.title) + ' Deleted';
+					setUndo(msg, [deletedItem], spaceMappings);
+					toast.success(msg, {
 						style: 'border-radius: 200px; background: #333; color: #fff;',
-						duration: 1500
+						duration: 2000
 					});
 					history.back();
-				}}
-				class="py-2"
-			>
-				<div class="block px-4 py-1 text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
-					<span class="flex justify-between">
-						Delete
-						<Trash />
-					</span>
-				</div>
-			</div>
+				};
+			}}
+			class="flex cursor-pointer items-center justify-between px-2 py-4 text-red-400 transition-colors hover:text-red-300 active:scale-[0.98]"
+		>
+			<span>Delete</span>
+			<Trash class="size-4" />
 		</div>
-	{/if}
-	{#if spaceMenu}
-		{@render AddtoSpace()}
-	{/if}
-	{#snippet AddtoSpace()}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="rounded-lg">
-			<div
-				transition:slide|global
-				id="dropdownDots"
-				class="bg-primary-950/70 absolute right-0 z-100 h-40 w-50 divide-y divide-white overflow-y-auto rounded-lg font-bold shadow-xs outline backdrop-blur-lg"
-			>
-				{#each [...localSpaces.current].reverse() as item, index}
-					<div
-						onclick={() => {
-							if (item.items.length < 1) {
-								item.items.push(cardPage);
-								toast.success('Item Added to ' + item.name, {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-							} else {
-								let tempArr = item.items.filter((item: any) => item.title !== cardPage.title);
-								item.items = tempArr;
-								toast.success('Item Removed from ' + item.name, {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-							}
+	</div>
+{/snippet}
 
-							spaceMenu = !spaceMenu;
-						}}
-						class="py-2"
-					>
-						<div class=" px-2 py-0.5 text-{item.clr}-400">
-							<span class="flex justify-between">
-								<p class="w-30 truncate">
-									{item.name}
-								</p>
-								<CircleDotDashed />
-							</span>
-						</div>
-					</div>
-				{/each}
+{#snippet ConfirmDialogue()}
+	<div class="card m-4 w-full max-w-md px-4 py-8 text-center">
+		<div class="flex flex-col items-center justify-center gap-2">
+			<p class="text-center text-2xl font-bold">{confirmState.title}</p>
+			<p class="text-md pb-4 text-center font-mono">{confirmState.message}</p>
+			<div class="flex w-full items-center justify-around gap-4">
+				<button
+					onclick={() => {
+						confirmState.onConfirm?.();
+						confirmState.open = false;
+					}}
+					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 font-mono text-lg font-bold text-red-400"
+				>
+					{confirmState.confirmText}
+				</button>
+				<button
+					onclick={() => {
+						confirmState.open = false;
+					}}
+					class="btn btn-secondary w-full bg-green-300/20 p-2 font-mono text-lg font-bold text-green-300"
+				>
+					No, don't
+				</button>
 			</div>
 		</div>
-	{/snippet}
+	</div>
 {/snippet}
