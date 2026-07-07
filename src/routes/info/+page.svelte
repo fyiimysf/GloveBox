@@ -1,8 +1,7 @@
 <script lang="ts">
 	import avatar from '$lib/assets/avatar.jpg';
-	import { Github, Instagram, Linkedin, Twitter } from '@lucide/svelte';
 	import { Avatar } from '@skeletonlabs/skeleton-svelte';
-	import { ArrowLeft, ArrowLeftIcon, ArrowUpRightFromSquare, Link2 } from 'lucide-svelte';
+	import { ArrowLeft, ArrowLeftIcon, ArrowUpRightFromSquare, Link2, Github, Instagram, Linkedin, Twitter } from 'lucide-svelte';
 	import { blur, slide } from 'svelte/transition';
 	let links = {
 		repo: 'https://github.com/fyiimysf/GloveBox',

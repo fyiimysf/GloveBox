@@ -5,11 +5,13 @@ export class LocalStorage<T> {
 	#version = $state(0);
 	#listeners = 0;
 	#value: T | undefined;
+	#proxies = new WeakMap();
+	#raw: string | null = null;
+	#parsed: any = null;
 
 	#handler = (e: StorageEvent) => {
 		if (e.storageArea !== localStorage) return;
 		if (e.key !== this.#key) return;
-
 		this.#version += 1;
 	};
 
@@ -24,55 +26,49 @@ export class LocalStorage<T> {
 		}
 	}
 
+	#read() {
+		const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(this.#key) : null;
+		if (raw === this.#raw && this.#parsed !== null) return this.#parsed;
+		this.#raw = raw;
+		this.#parsed = raw ? JSON.parse(raw) : this.#value;
+		return this.#parsed;
+	}
+
+	#proxy(value: unknown): unknown {
+		if (typeof value !== 'object' || value === null) return value;
+
+		let p = this.#proxies.get(value);
+		if (!p) {
+			p = new Proxy(value, {
+				get: (target, property) => {
+					this.#version;
+					return this.#proxy(Reflect.get(target, property));
+				},
+				set: (target, property, value) => {
+					this.#version += 1;
+					Reflect.set(target, property, value);
+					if (typeof localStorage !== 'undefined') {
+						localStorage.setItem(this.#key, JSON.stringify(this.#parsed));
+						this.#raw = null;
+					}
+					return true;
+				}
+			});
+			this.#proxies.set(value, p);
+		}
+		return p;
+	}
+
 	get current() {
 		this.#version;
-
-		const root =
-			typeof localStorage !== 'undefined'
-				? JSON.parse(localStorage.getItem(this.#key) as any)
-				: this.#value;
-
-		const proxies = new WeakMap();
-
-		const proxy = (value: unknown) => {
-			if (typeof value !== 'object' || value === null) {
-				return value;
-			}
-
-			let p = proxies.get(value);
-
-			if (!p) {
-				p = new Proxy(value, {
-					get: (target, property) => {
-						this.#version;
-						return proxy(Reflect.get(target, property));
-					},
-					set: (target, property, value) => {
-						this.#version += 1;
-						Reflect.set(target, property, value);
-
-						if (typeof localStorage !== 'undefined') {
-							localStorage.setItem(this.#key, JSON.stringify(root));
-						}
-
-						return true;
-					}
-				});
-
-				proxies.set(value, p);
-			}
-
-			return p;
-		};
+		const root = this.#read();
 
 		if ($effect.tracking()) {
 			$effect(() => {
 				if (this.#listeners === 0) {
 					window.addEventListener('storage', this.#handler);
 				}
-
 				this.#listeners += 1;
-
 				return () => {
 					tick().then(() => {
 						this.#listeners -= 1;
@@ -84,14 +80,14 @@ export class LocalStorage<T> {
 			});
 		}
 
-		return proxy(root);
+		return this.#proxy(root);
 	}
 
 	set current(value) {
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem(this.#key, JSON.stringify(value));
 		}
-
+		this.#raw = null;
 		this.#version += 1;
 	}
 }

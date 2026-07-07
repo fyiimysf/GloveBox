@@ -89,20 +89,22 @@ export const cardPage: {
 	date: new Date().toLocaleDateString()
 });
 
-try {
-	if (typeof sessionStorage !== 'undefined') {
-		const saved = sessionStorage.getItem('cardPage');
-		if (saved) {
-			const data = JSON.parse(saved);
-			cardPage.title = data.title;
-			cardPage.img = data.img;
-			cardPage.link = data.link;
-			cardPage.text = data.text;
-			cardPage.date = data.date;
-			cardPage.url = data.url;
+export function restoreCardPage(): void {
+	try {
+		if (typeof sessionStorage !== 'undefined') {
+			const saved = sessionStorage.getItem('cardPage');
+			if (saved) {
+				const data = JSON.parse(saved);
+				cardPage.title = data.title || cardPage.title;
+				cardPage.img = data.img || cardPage.img;
+				cardPage.link = data.link || cardPage.link;
+				cardPage.text = data.text || cardPage.text;
+				cardPage.date = data.date || cardPage.date;
+				cardPage.url = data.url || cardPage.url;
+			}
 		}
-	}
-} catch {}
+	} catch {}
+}
 
 export function saveCardPage(): void {
 	if (typeof sessionStorage !== 'undefined') {

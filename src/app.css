@@ -16,12 +16,47 @@
 
 @source '../node_modules/@skeletonlabs/skeleton-svelte/dist';
 
-/* @custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *)); */
-
 html,
 body {
 	@apply h-full;
 }
+
 @theme {
 	--breakpoint-xs: 24rem;
+}
+
+.gpu {
+	will-change: transform;
+}
+
+.gpu-layer {
+	contain: layout style paint;
+}
+
+.gpu-opacity {
+	will-change: opacity;
+}
+
+@supports not (backdrop-filter: blur()) {
+	[class*="backdrop-blur"] {
+		background: rgba(0, 0, 0, 0.85) !important;
+		backdrop-filter: none !important;
+		-webkit-backdrop-filter: none !important;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+
+	[class*="transition-all"],
+	[class*="duration-"] {
+		transition-duration: 0.01ms !important;
+	}
 }

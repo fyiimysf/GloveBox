@@ -83,7 +83,7 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class="text-primary-400 absolute right-3 z-11 mt-3 rounded-full bg-black/5 mix-blend-difference backdrop-blur-lg"
+					class="text-primary-200 absolute right-3 z-11 mt-3 rounded-full bg-black/60 shadow-lg"
 					onclick={(e) => e.stopPropagation()}
 					><Link class="size-7 p-1" /></a
 				>
@@ -95,6 +95,8 @@
 					onerror={imgError}
 					class="aspect-video w-full object-cover"
 					alt="card-preview"
+					loading="lazy"
+					decoding="async"
 				/>
 			</header>
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -123,7 +125,7 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="text-primary-500 absolute right-1 mt-1 rounded-full bg-black/10 backdrop-blur-lg"
+						class="text-primary-200 absolute right-1 mt-1 rounded-full bg-black/60 shadow-lg"
 						onclick={(e) => e.stopPropagation()}
 						><Link class="size-6 p-1" /></a
 					>
@@ -135,9 +137,11 @@
 				onerror={imgError}
 				class="aspect-video h-full w-full object-cover"
 				alt="card-preview"
+				loading="lazy"
+				decoding="async"
 			/>
 
-			<article class="bg-primary-900/0 relative bottom-8 rounded-b-xl p-1 mix-blend-difference">
+			<article class="relative bottom-8 rounded-b-xl bg-gradient-to-t from-black/80 to-transparent p-1">
 				<span class="-space-y-2">
 					<p class="p truncate px-1">{h1}</p>
 				</span>

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { cardPage, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, setUndoRemove } from '$lib/shared.svelte';
-	import { CircleDashed, CircleDot, CircleOff, CircleX, Trash2 } from '@lucide/svelte';
-	import { CircleDotDashed, Delete, Link, MoreVertical, Trash, X } from 'lucide-svelte';
+	import { CircleDashed, CircleDot, CircleOff, CircleX, Trash2, CircleDotDashed, Delete, Link, MoreVertical, Trash, X } from 'lucide-svelte';
 	import { fade, slide, blur, fly } from 'svelte/transition';
 	import toast from 'svelte-french-toast';
 	import { page } from '$app/state';
@@ -11,22 +10,21 @@
 
 	let { data, id = 0 }: { data?: any; id?: number } = $props();
 
-	function DeleteFromStorage() {
-		localItems.current.slice(data, 1);
-	}
+	
 </script>
 
 <!-- svelte-ignore a11y_consider_explicit_label -->
 <button
 	id="dropdownMenuIconButton"
-	class=" rounded-full p-1 mix-blend-difference backdrop-blur"
+	class="rounded-full p-1.5 bg-black/40 text-white shadow-lg active:scale-95 transition-transform duration-150"
 	type="button"
-	onclick={() => {
+	onclick={(e) => {
+		e.stopPropagation();
 		dropMenu = !dropMenu;
 	}}
 >
 	{#if dropMenu || spaceMenu}
-		<X />
+		<X class="size-5" />
 	{:else}
 		<MoreVertical class="size-5 text-white" />
 	{/if}
@@ -37,11 +35,12 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 {#if dropMenu || spaceMenu}
 	<div
-		onclick={() => {
+		onclick={(e) => {
+			e.stopPropagation();
 			dropMenu = false;
 			spaceMenu = false;
 		}}
-		class="fixed inset-0 z-1 bg-black/50 backdrop-blur-[1px]"
+		class="fixed inset-0 z-10 bg-black/50 backdrop-blur-[1px]"
 	></div>
 {/if}
 {#if dropMenu}
@@ -50,94 +49,85 @@
 	<div
 		transition:slide={{ duration: 150 }}
 		id="dropdownDots"
-		onclick={() => {
-			dropMenu = !dropMenu;
+		onclick={(e) => {
+			e.stopPropagation();
 		}}
-		class="bg-primary-950/60 absolute z-100 w-35 rounded-lg px-2 py-1 text-xs font-bold text-white shadow-sm backdrop-blur-lg"
+		class="bg-primary-950/70 absolute z-100 w-44 rounded-xl px-1 py-1.5 text-sm font-bold text-white shadow-xl backdrop-blur-xl border border-white/10"
 	>
 		{#if data.url !== ''}
-			<a target="_blank" href={data.url} class="">
-				<div class="block py-2 text-xs text-yellow-300">
-					<span class="flex justify-between">
-						Open Link
-						<Link />
-					</span>
-				</div>
+			<a target="_blank" href={data.url} class="block rounded-lg px-3 py-3 text-yellow-300 hover:bg-white/5 active:scale-[0.98] transition-all duration-150">
+				<span class="flex items-center justify-between gap-3">
+					<span>Open Link</span>
+					<Link class="size-4 shrink-0" />
+				</span>
 			</a>
+			<hr class="mx-2 border-white/5" />
 		{/if}
 
 		{#if localSpaces.current.length > 0}
 			{#each localSpaces.current as spaceObj}
 				{#each spaceObj.items as obj}
 					{#if obj.title === data.title}
-						<div class="py-1">
-							<div class="block py-1">
-								<span
-									onclick={(e) => {
-										e.stopPropagation();
-										dropMenu = false;
-										confirmState.open = true;
-										confirmState.title = 'Remove from ' + spaceObj.name + '?';
-										confirmState.message = data.title;
-										confirmState.confirmText = 'Remove';
-										confirmState.onConfirm = () => {
-											const deletedItem = data;
-											spaceObj.items.forEach((item: any) => {
-												if (item.title === data.title) {
-													let tempArr2 = spaceObj.items.filter(
-														(item: any) => item.title !== data.title
-													);
-													spaceObj.items = tempArr2;
-												}
-											});
-											spaceview.viewItems.forEach((item: any) => {
-												if (item.title === data.title) {
-													let tempArr3 = spaceview.viewItems.filter(
-														(item: any) => item.title !== data.title
-													);
-													spaceview.viewItems = tempArr3;
-												}
-											});
-											const msg = truncate(data.title) + ' removed';
-											setUndoRemove(msg, [deletedItem], spaceObj.name);
-											toast.success(msg, {
-												style: 'border-radius: 200px; background: #333; color: #fff;',
-												duration: 2000
-											});
-										};
-									}}
-									class="flex justify-between text-{spaceObj.clr}-400"
-								>
-									<p class="w-30 truncate">
-										Delete From <br />{spaceObj.name}
-									</p>
-									<CircleOff />
-								</span>
-							</div>
+						<div
+							onclick={(e) => {
+								e.stopPropagation();
+								dropMenu = false;
+								confirmState.open = true;
+								confirmState.title = 'Remove from ' + spaceObj.name + '?';
+								confirmState.message = data.title;
+								confirmState.confirmText = 'Remove';
+								confirmState.onConfirm = () => {
+									const deletedItem = data;
+									spaceObj.items.forEach((item: any) => {
+										if (item.title === data.title) {
+											let tempArr2 = spaceObj.items.filter(
+												(item: any) => item.title !== data.title
+											);
+											spaceObj.items = tempArr2;
+										}
+									});
+									spaceview.viewItems.forEach((item: any) => {
+										if (item.title === data.title) {
+											let tempArr3 = spaceview.viewItems.filter(
+												(item: any) => item.title !== data.title
+											);
+											spaceview.viewItems = tempArr3;
+										}
+									});
+									const msg = truncate(data.title) + ' removed';
+									setUndoRemove(msg, [deletedItem], spaceObj.name);
+									toast.success(msg, { duration: 2000 });
+								};
+							}}
+							class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-3 text-{spaceObj.clr}-400 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+						>
+							<span class="truncate">Remove from <span class="font-bold">{spaceObj.name}</span></span>
+							<CircleOff class="size-4 shrink-0" />
 						</div>
+						<hr class="mx-2 border-white/5" />
 					{/if}
 				{/each}
 			{/each}
 			{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
-				<div class="  py-1">
-					<span
-						onclick={() => {
-							spaceMenu = !spaceMenu;
-							localSpaces.current.forEach((spc: any) => {
-								spc.items.forEach((item: any) => {
-									if (item.title === data.title) {
-										let tempArr2 = spc.items.filter((item: any) => item.title !== data.title);
-										spc.items = tempArr2;
-									}
-								});
+				<div
+					onclick={(e) => {
+						e.stopPropagation();
+						spaceMenu = !spaceMenu;
+						localSpaces.current.forEach((spc: any) => {
+							spc.items.forEach((item: any) => {
+								if (item.title === data.title) {
+									let tempArr2 = spc.items.filter((item: any) => item.title !== data.title);
+									spc.items = tempArr2;
+								}
 							});
-						}}
-						class="flex justify-between"
-					>
-						Add To Space
-						<CircleDotDashed />
-					</span>
+						});
+					}}
+					class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-3 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+				>
+					<span>Add To Space</span>
+					<CircleDotDashed class="size-4 shrink-0" />
 				</div>
+				<hr class="mx-2 border-white/5" />
 			{/if}
 		{/if}
 		{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
@@ -171,19 +161,14 @@
 						setUndo(msg, [deletedItem], spaceMappings);
 						toast(msg, {
 							icon: '🗑️',
-							style: 'border-radius: 200px; background: #333; color: #fff;',
 							duration: 2000
 						});
 					};
 				}}
-				class="py-1"
+				class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-3 text-red-400 hover:bg-red-500/10 active:scale-[0.98] transition-all duration-150"
 			>
-				<div class="block py-1 text-red-400 hover:bg-gray-100 dark:hover:bg-gray-600">
-					<span class="flex justify-between">
-						Delete
-						<Trash />
-					</span>
-				</div>
+				<span>Delete</span>
+				<Trash class="size-4 shrink-0" />
 			</div>
 		{/if}
 	</div>
@@ -200,39 +185,32 @@
 		<div
 			transition:slide={{ duration: 150 }}
 			id="dropdownDots"
-			class="bg-primary-950/70 absolute z-100 h-28 w-40 overflow-y-auto rounded-lg font-bold shadow-xs backdrop-blur-lg"
+			class="bg-primary-950/70 absolute z-100 w-44 max-h-48 overflow-y-auto rounded-xl font-bold shadow-xl backdrop-blur-xl border border-white/10"
 		>
+			<div
+				onclick={(e) => {
+					e.stopPropagation();
+					spaceMenu = false;
+				}}
+				class="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-white/60 hover:bg-white/5 active:scale-[0.98] transition-all duration-150 border-b border-white/5"
+			>
+				<span class="text-sm">← Back</span>
+			</div>
 			{#each [...localSpaces.current].reverse() as item, index}
 				<div
-					onclick={() => {
-						console.log(item.items.length);
+					onclick={(e) => {
+						e.stopPropagation();
 						item.items.push(data);
-						toast.success('Item Added to ' + item.name, {
-							style: 'border-radius: 200px; background: #333; color: #fff;',
-							duration: 1500
-						});
-						// if (item.items.length <= 0) {
-						// } else {
-						// 	let tempArr = item.items.filter((item: any) => item.title !== data.title);
-						// 	item.items = tempArr;
-						// 	toast.success('Item Removed from ' + item.name, {
-						// 		style: 'border-radius: 200px; background: #333; color: #fff;',
-						// 		duration: 1500
-						// 	});
-						// }
-
+						toast.success('Added to ' + item.name, { duration: 1500 });
 						spaceMenu = !spaceMenu;
 					}}
-					class="py-1"
+					class="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-3 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
 				>
-					<div class=" px-2 py-0.5 text-xs text-{item.clr}-400">
-						<span class="flex justify-between">
-							<p class="w-30 truncate">
-								{item.name}
-							</p>
-							<CircleDotDashed />
-						</span>
-					</div>
+					<span class="flex items-center gap-2 truncate">
+						<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{item.clr}-400"></span>
+						<span class="truncate">{item.name}</span>
+					</span>
+					<CircleDotDashed class="size-4 shrink-0 text-white/50" />
 				</div>
 			{/each}
 		</div>

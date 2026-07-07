@@ -1,14 +1,31 @@
 <script lang="ts">
-	import { fly, scale, blur, slide } from 'svelte/transition';
+	import { fly, scale, blur, slide, fade } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import Cards from '$lib/components/Cards.svelte';
 	import { home, localItems, localSpaces, confirmState, truncate, setUndo } from '$lib/shared.svelte';
-	import { ArrowLeft, CircleMinus, Trash2, CheckSquare, Square } from 'lucide-svelte';
+	import { ArrowLeft, CircleDotDashed, CircleMinus, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 
 	let { data }: { data: PageData } = $props();
 
+	let spaceMenu = $state(false);
+
 	let reversedItems = $derived([...localItems.current].reverse());
+
+	function addSelectedToSpace(spc: any) {
+		let added = 0;
+		for (const title of home.selectedTitles) {
+			const item = localItems.current.find((i: any) => i.title === title);
+			if (item && !spc.items.some((i: any) => i.title === title)) {
+				spc.items.push(item);
+				added++;
+			}
+		}
+		home.selectedTitles = [];
+		home.selectMode = false;
+		spaceMenu = false;
+		toast.success(added + ' items added to ' + spc.name, { duration: 2000 });
+	}
 
 	function toggleSelectAll() {
 		let allSelected = reversedItems.every((item: any) => home.selectedTitles.includes(item.title));
@@ -21,9 +38,9 @@
 </script>
 
 <div class="relative z-1 mb-20 grid space-y-6">
-	<div in:scale|global>
+	<div in:scale|global class="gpu">
 		<div class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
-			{#each reversedItems as _}
+			{#each reversedItems as _, i (_.title)}
 				<Cards
 					img={_.img}
 					h1={_.title}
@@ -50,74 +67,113 @@
 {#if home.selectMode}
 	<div
 		in:fly={{ y: 40, duration: 200 }}
-		class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-black/80 px-4 py-3 shadow-2xl backdrop-blur-xl border border-white/10"
+		class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 overflow-x-auto rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10"
 	>
 		<button
-			class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
+			class="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
 			onclick={toggleSelectAll}
 		>
 			{#if reversedItems.every((item: any) => home.selectedTitles.includes(item.title))}
 				<CheckSquare class="size-4" />
-				Deselect All
+				All
 			{:else}
 				<Square class="size-4" />
-				Select All
+				All
 			{/if}
 		</button>
-		<span class="h-6 w-px bg-white/10"></span>
-		<span class="px-2 text-sm font-bold text-white/80">{home.selectedTitles.length} selected</span>
+		<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/80">{home.selectedTitles.length}</span>
 		{#if home.selectedTitles.length > 0}
-			<button
-				class="flex items-center gap-1.5 rounded-xl bg-red-500 px-3 py-1.5 text-xs font-bold text-white transition-colors duration-200 hover:bg-red-400"
-				onclick={() => {
-					confirmState.open = true;
-					confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
-					confirmState.message = 'This will remove them from all spaces too';
-					confirmState.confirmText = 'Delete All';
-					confirmState.onConfirm = () => {
-						let titles = home.selectedTitles;
-						const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
-						const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-						for (const spc of localSpaces.current) {
-							const matching = spc.items.filter((i: any) => titles.includes(i.title));
-							if (matching.length > 0) {
-								spaceMappings.push({ spaceName: spc.name, items: matching });
+			<span class="ml-auto flex items-center gap-1">
+				<button
+					class="flex items-center justify-center rounded-xl p-2 text-yellow-300/80 transition-colors duration-200 hover:bg-white/10 hover:text-yellow-300"
+					onclick={() => { spaceMenu = true; }}
+				>
+					<CircleDotDashed class="size-4" />
+				</button>
+				<button
+					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
+					onclick={() => {
+						confirmState.open = true;
+						confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
+						confirmState.message = 'This will remove them from all spaces too';
+						confirmState.confirmText = 'Delete All';
+						confirmState.onConfirm = () => {
+							let titles = home.selectedTitles;
+							const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
+							const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+							for (const spc of localSpaces.current) {
+								const matching = spc.items.filter((i: any) => titles.includes(i.title));
+								if (matching.length > 0) {
+									spaceMappings.push({ spaceName: spc.name, items: matching });
+								}
 							}
-						}
-						let tempArr = localItems.current.filter(
-							(item: any) => !titles.includes(item.title)
-						);
-						localItems.current = tempArr;
-						localSpaces.current.forEach((spc: any) => {
-							spc.items = spc.items.filter(
+							let tempArr = localItems.current.filter(
 								(item: any) => !titles.includes(item.title)
 							);
-						});
+							localItems.current = tempArr;
+							localSpaces.current.forEach((spc: any) => {
+								spc.items = spc.items.filter(
+									(item: any) => !titles.includes(item.title)
+								);
+							});
+							home.selectedTitles = [];
+							home.selectMode = false;
+							const msg = titles.length + ' items Deleted';
+							setUndo(msg, deletedItems, spaceMappings);
+							toast.success(msg, { duration: 2000 });
+						};
+					}}
+				>
+					<Trash2 class="size-4" />
+				</button>
+				<button
+					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
+					onclick={() => {
 						home.selectedTitles = [];
 						home.selectMode = false;
-						const msg = titles.length + ' items Deleted';
-						setUndo(msg, deletedItems, spaceMappings);
-						toast.success(msg, {
-							style: 'border-radius: 200px; background: #333; color: #fff;',
-							duration: 2000
-						});
-					};
-				}}
-			>
-				<Trash2 class="size-4" />
-				Delete
-			</button>
-			<button
-				class="rounded-xl px-3 py-1.5 text-xs font-bold text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
-				onclick={() => {
-					home.selectedTitles = [];
-					home.selectMode = false;
-				}}
-			>
-				Cancel
-			</button>
+					}}
+				>
+					<X class="size-4" />
+				</button>
+			</span>
 		{/if}
 	</div>
+
+	{#if spaceMenu}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			transition:fade={{ duration: 150 }}
+			onclick={() => { spaceMenu = false; }}
+			class="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm"
+		></div>
+		<div
+			transition:slide={{ duration: 200 }}
+			class="fixed bottom-0 left-0 right-0 z-40 flex flex-col rounded-t-2xl bg-primary-950/90 px-4 pb-8 pt-2 shadow-2xl backdrop-blur-xl border-t border-white/10"
+		>
+			<div class="mx-auto mb-3 h-1.5 w-10 rounded-full bg-white/20"></div>
+			<div class="mb-2 flex items-center justify-between">
+				<span class="text-sm font-bold text-white/80">Add {home.selectedTitles.length} items to...</span>
+				<button
+					onclick={() => { spaceMenu = false; }}
+					class="rounded-xl p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+				>
+					<X class="size-4" />
+				</button>
+			</div>
+			<div class="flex max-h-60 flex-col gap-1 overflow-y-auto">
+				{#each [...localSpaces.current].reverse() as spc}
+					<button
+						onclick={() => addSelectedToSpace(spc)}
+						class="flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-bold text-white/80 transition-colors duration-150 hover:bg-white/10 active:scale-[0.98]"
+					>
+						<span class="h-3 w-3 shrink-0 rounded-full bg-{spc.clr}-400"></span>
+						<span>{spc.name}</span>
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
 {:else}
 	<!-- Back Button -->
 	<button

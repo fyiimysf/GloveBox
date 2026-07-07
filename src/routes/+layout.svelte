@@ -36,7 +36,10 @@
 		CircleOff,
 		CircleDotDashed,
 		Check,
-		Clipboard
+		Clipboard,
+		ChevronUpCircle,
+		CircleX,
+		Trash2
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 	import {
@@ -127,7 +130,13 @@
 	let loading = $state(false);
 	let error: string | null = $state(null);
 	let ogData: OpenGraphData | null = $state(null);
+	let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 	import noImageUrl from '$lib/assets/no-image.png';
+	function debouncedHandleSubmit() {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(() => handleSubmit(), 400);
+	}
+
 	async function handleSubmit() {
 		if (!url) {
 			error = 'Please enter a URL';
@@ -162,7 +171,6 @@
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { ChevronUpCircle, CircleX, Trash2 } from '@lucide/svelte';
 
 	//Chips
 	let chipsSelect = $state(false);
@@ -200,7 +208,7 @@
 <div class="flex justify-center w-screen">
 	<div class="grid h-screen w-full lg:max-w-[480px] grid-rows-[auto_1fr_auto] select-none">
 	<!-- Header -->
-	<header in:slide class="sticky top-0 z-10 backdrop-blur-xl">
+	<header in:slide class="gpu sticky top-0 z-10 backdrop-blur-xl">
 		<!-- <AppBarC title={value} {homeLayout}></AppBarC> -->
 		{#if !page.error && !first.current}
 			{@render Appbar(home.pageTitle, null)}
@@ -215,7 +223,6 @@
 				<CircleDashed class="text-primary-800 size-30 animate-spin" />
 				<CircleMinus class=" text-primary-800 fixed size-15 animate-ping" />
 			</div>
-			<!-- <Placeholder /> -->
 		{:else}
 			{@render children()}
 			{#if first.current && localItems.current.length < 1 && localSpaces.current.length < 1}
@@ -261,12 +268,17 @@
 		{/if}
 	</main>
 
-	<Toaster />
+	<Toaster
+		toastOptions={{
+			
+			duration: 2000
+		}}
+	/>
 
 	{#if undoState.pending}
 		<div
 			in:fly={{ y: 40, duration: 200 }}
-			class="fixed bottom-26 left-1/2 z-50 flex w-full max-w-sm -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
+			class="gpu fixed bottom-26 left-1/2 z-50 flex w-full max-w-sm -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
 		>
 			<span class="font-semibold text-white drop-shadow-sm">{undoState.message}</span>
 			<button
@@ -281,10 +293,10 @@
 	{#if dropMenu || spaceMenu}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="fixed inset-0 z-40" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
+		<div class="gpu fixed inset-0 z-40" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
 		<div
 			transition:fly={{ y: 100, duration: 200 }}
-			class="fixed bottom-0 z-50 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] rounded-t-4xl bg-primary-900/70 px-6 pb-10 pt-4 shadow-2xl backdrop-blur-xl border-t border-white/10"
+			class="gpu fixed bottom-0 z-50 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] rounded-t-4xl bg-primary-900/70 px-6 pb-10 pt-4 shadow-2xl backdrop-blur-xl border-t border-white/10"
 		>
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -297,11 +309,11 @@
 		{#if navbarExpanded}
 			<div
 				transition:blur={{ duration: 200 }}
-				class="fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
+				class="gpu fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
 				onclick={closeExpanded}
 			></div>
 		{/if}
-		<div transition:slide|global class="fixed bottom-5 z-11 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] px-4">
+		<div transition:slide|global class="gpu fixed bottom-5 z-11 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] px-4">
 			<div
 				class="rounded-3xl border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
 			>
@@ -377,7 +389,7 @@
 	{#if confirmState.open}
 		<div
 			transition:fade={{duration:200}}
-			class="fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-md"
+			class="gpu fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-md"
 		>
 			{@render ConfirmDialogue()}
 		</div>
@@ -386,8 +398,8 @@
 </div>
 
 {#snippet Appbar(title: string, children: any)}
-	<div transition:slide|global>
-		<AppBar classes="dark:bg-primary-950/80">
+	<div transition:slide|global class="gpu">
+		<AppBar classes="dark:bg-primary-950/80 gpu-layer">
 			{#snippet headline()}
 				{#if page.route.id === '/settings'}
 					<center>
@@ -504,7 +516,7 @@
 								onclick={() => {
 									home.spaceDelete = true;
 									toast('Select Spaces to Delete', {
-										style: 'border-radius: 200px; background: #333; color: #fff;',
+										
 										duration: 2000
 									});
 								}}
@@ -598,7 +610,7 @@
 									}
 								});
 								toast.success('Space Deleted', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
+									
 									duration: 2000
 								});
 								history.back();
@@ -708,7 +720,7 @@
 							id="item-url"
 							class="ig-input"
 							bind:value={url}
-							oninput={handleSubmit}
+							oninput={debouncedHandleSubmit}
 							type="url"
 							placeholder="https://www.example.com"
 						/>
@@ -726,7 +738,7 @@
 										.readText()
 										.then((text) => {
 											url = text;
-											handleSubmit();
+											debouncedHandleSubmit();
 										})
 										.catch((err) => {
 											console.error('Failed to read clipboard: ', err);
@@ -803,7 +815,7 @@
 											'';
 								} else {
 									toast.error('Error fetching OpenGraph data', {
-										style: 'border-radius: 200px; background: #333; color: #fff;',
+										
 										duration: 1500
 									});
 								}
@@ -815,7 +827,7 @@
 								addItemToSpace(sharedItem);
 								navbarExpanded = false;
 								toast.success('Item Added', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
+									
 									duration: 1500
 								});
 								url =
@@ -827,13 +839,13 @@
 										'';
 							} else if (url !== '') {
 								toast.error('Link invalid or "https://" missing', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
+									
 									duration: 2000
 								});
 							} else {
 								console.log('Important Fields Empty');
 								toast.error('Important fields are missing', {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
+									
 									duration: 1500
 								});
 							}
@@ -898,21 +910,21 @@
 										localSpaces.current.push(space);
 										navbarExpanded = !navbarExpanded;
 										toast.success('Space "' + space.name + '" Created', {
-											style: 'border-radius: 200px; background: #333; color: #fff;',
+											
 											duration: 1500
 										});
 										space.clr = 'purple';
 										space.name = space.desc = '';
 									} else {
 										toast.error('Space "' + space.name + '" already exists', {
-											style: 'border-radius: 200px; background: #333; color: #fff;',
+											
 											duration: 1500
 										});
 									}
 								} else {
 									console.log('Important Fields Empty in Spaces');
 									toast.error('Important fields are missing', {
-										style: 'border-radius: 200px; background: #333; color: #fff;',
+										
 										duration: 1500
 									});
 								}
@@ -1001,7 +1013,7 @@
 								const msg = truncate(cardPage.title) + ' removed';
 								setUndoRemove(msg, [deletedItem], spaceObj.name);
 								toast.success(msg, {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
+									
 									duration: 2000
 								});
 							};
@@ -1026,40 +1038,42 @@
 					<ArrowLeft class="size-4" />
 					<span>Back</span>
 				</div>
-				{#each [...localSpaces.current].reverse() as item}
-					<!-- svelte-ignore a11y_click_events_have_key_events -->
-					<!-- svelte-ignore a11y_no_static_element_interactions -->
-					<div
-						onclick={() => {
-							const isInSpace = item.items.some((i: any) => i.title === cardPage.title);
-							if (isInSpace) {
-								item.items = item.items.filter((i: any) => i.title !== cardPage.title);
-								toast.success('Item Removed from ' + item.name, {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-							} else {
-								item.items.push(cardPage);
-								toast.success('Item Added to ' + item.name, {
-									style: 'border-radius: 200px; background: #333; color: #fff;',
-									duration: 1500
-								});
-							}
-							spaceMenu = false;
-						}}
-						class="flex cursor-pointer items-center justify-between px-2 py-3 transition-colors hover:text-white active:scale-[0.98]"
-					>
-						<span class="flex min-w-0 items-center gap-2 pr-2">
-							<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{item.clr}-400"></span>
-							<span class="truncate">{item.name}</span>
-						</span>
-						{#if item.items.some((i: any) => i.title === cardPage.title)}
-							<Check class="size-4 shrink-0 text-green-400" />
-						{:else}
-							<Plus class="size-4 shrink-0 text-white/50" />
-						{/if}
-					</div>
-				{/each}
+				<div class="max-h-48 overflow-y-auto">
+					{#each [...localSpaces.current].reverse() as item}
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<div
+							onclick={() => {
+								const isInSpace = item.items.some((i: any) => i.title === cardPage.title);
+								if (isInSpace) {
+									item.items = item.items.filter((i: any) => i.title !== cardPage.title);
+									toast.success('Item Removed from ' + item.name, {
+										
+										duration: 1500
+									});
+								} else {
+									item.items.push(cardPage);
+									toast.success('Item Added to ' + item.name, {
+										
+										duration: 1500
+									});
+								}
+								spaceMenu = false;
+							}}
+							class="flex cursor-pointer items-center justify-between px-2 py-3 transition-colors hover:text-white active:scale-[0.98]"
+						>
+							<span class="flex min-w-0 items-center gap-2 pr-2">
+								<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{item.clr}-400"></span>
+								<span class="truncate">{item.name}</span>
+							</span>
+							{#if item.items.some((i: any) => i.title === cardPage.title)}
+								<Check class="size-4 shrink-0 text-green-400" />
+							{:else}
+								<Plus class="size-4 shrink-0 text-white/50" />
+							{/if}
+						</div>
+					{/each}
+				</div>
 			</div>
 		{:else if localSpaces.current.length > 0}
 			<div
@@ -1100,7 +1114,7 @@
 					const msg = truncate(cardPage.title) + ' Deleted';
 					setUndo(msg, [deletedItem], spaceMappings);
 					toast.success(msg, {
-						style: 'border-radius: 200px; background: #333; color: #fff;',
+						
 						duration: 2000
 					});
 					history.back();

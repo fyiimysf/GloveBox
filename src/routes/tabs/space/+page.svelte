@@ -2,7 +2,6 @@
 	import { page } from '$app/state';
 	import Cards from '$lib/components/Cards.svelte';
 	import { cardPage, home, localSpaces, space, spaceview, confirmState, saveSpaceviewName } from '$lib/shared.svelte';
-	import { CircleX, Currency } from '@lucide/svelte';
 	import { Segment } from '@skeletonlabs/skeleton-svelte';
 	import {
 		ArrowDown,
@@ -11,7 +10,9 @@
 		CircleSlash,
 		CircleSlash2,
 		Trash,
-		X
+		X,
+		CircleX,
+		Currency
 	} from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 	import { fly, blur, fade, slide } from 'svelte/transition';
@@ -20,18 +21,15 @@
 	});
 
 	function emptyToast() {
-		toast(spaceview.pageTitle + ' is Empty', {
-			style: 'border-radius: 200px; background: #333; color: #fff;',
-			duration: 1200
-		});
+		toast(spaceview.pageTitle + ' is Empty', { duration: 1200 });
 	}
 </script>
 
-<div class=" z-10 space-y-4" in:blur>
-	{#each [...localSpaces.current].reverse() as spaceItem}
+<div class=" z-10 space-y-4 pb-26" in:blur>
+	{#each [...localSpaces.current].reverse() as spaceItem (spaceItem.name)}
 		<div
 			transition:fly={{ delay: 0, x: 100 }}
-			class="
+			class="gpu
 			{spaceItem.clr === 'purple'
 				? 'bg-purple-400/10 text-purple-400 outline-purple-400'
 				: spaceItem.clr === 'red'
@@ -85,7 +83,6 @@
 										localSpaces.current = tempArr;
 										toast(spaceItem.name + ' Deleted', {
 											icon: '🗑️',
-											style: ' border-radius: 200px; background: #333; color: #fff;',
 											duration: 3000
 										});
 									};
@@ -147,7 +144,7 @@
 
 						grid grid-cols-2 gap-1 overflow-auto rounded-2xl p-1.5"
 						>
-							{#each [...spaceItem.items].reverse() as itemCard, index}
+							{#each [...spaceItem.items].reverse() as itemCard, index (itemCard.title)}
 								{#if index < 4}
 									<button
 										onclick={() => {

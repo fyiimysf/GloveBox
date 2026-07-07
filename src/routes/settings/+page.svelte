@@ -11,7 +11,8 @@
 		ArrowDownFromLine,
 		ArrowUpFromLine,
 		Palette,
-		StickerIcon
+		StickerIcon,
+		Info
 	} from 'lucide-svelte';
 	import type { PageData } from '../$types';
 	import { Accordion, Combobox, Switch } from '@skeletonlabs/skeleton-svelte';
@@ -28,7 +29,6 @@
 	import { redirect } from '@sveltejs/kit';
 	import { goto } from '$app/navigation';
 	import toast from 'svelte-french-toast';
-	import { Info } from '@lucide/svelte';
 	import { storage } from '@sveu/browser';
 
 	let { data }: { data: PageData } = $props();
@@ -200,10 +200,7 @@
 									const file: any = e.target?.files[0];
 									console.log(file.result);
 									if (file.type !== 'application/json') {
-										toast('Invalid file type!', {
-											icon: '⚠️',
-											style: 'border-radius: 200px; background: #333; color: #fff;'
-										});
+										toast('Invalid file type!', { icon: '⚠️' });
 										return;
 									}
 
@@ -212,10 +209,7 @@
 										console.log(event.target);
 										const data = JSON.parse(event.target.result);
 										localItems.current = data;
-										toast('Data Imported!', {
-											icon: '✅',
-											style: 'border-radius: 200px; background: #333; color: #fff;'
-										});
+										toast('Data Imported!', { icon: '✅' });
 										goto('/tabs/home');
 									};
 									reader.readAsText(file);
@@ -228,10 +222,7 @@
 						<button
 							onclick={() => {
 								if (localItems.current.length === 0) {
-									toast('Nothing to export!', {
-										icon: '⚠️',
-										style: 'border-radius: 200px; background: #333; color: #fff;'
-									});
+									toast('Nothing to export!', { icon: '⚠️' });
 									return;
 								}
 								const data = JSON.stringify(localItems.current);
