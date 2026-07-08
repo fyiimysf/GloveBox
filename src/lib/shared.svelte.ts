@@ -2,7 +2,7 @@ import { page } from '$app/state';
 import { LocalStorage } from './storage.svelte';
 import noImageUrl from '$lib/assets/no-image.png';
 import type { Color } from '@iconify/utils/lib/colors/types.mjs';
-import type { Space, ComboboxData } from './types';
+import type { ComboboxData } from './types';
 import type { Combobox } from '@skeletonlabs/skeleton-svelte';
 
 // place files you want to import through the `$lib` alias in this folder.
@@ -30,10 +30,19 @@ export const home = $state({
 	homeLayout: false,
 	savedLayout: false,
 	spaceviewLayout: false,
-	spaceDelete: false,
 	pageTitle: 'Home',
 	selectMode: false,
 	selectedTitles: [] as string[]
+});
+
+export const spaceSelect = $state<{
+	selectMode: boolean;
+	selectedNames: string[];
+	expandAll: boolean;
+}>({
+	selectMode: false,
+	selectedNames: [],
+	expandAll: false
 });
 
 export const confirmState = $state<{
@@ -50,6 +59,16 @@ export const confirmState = $state<{
 	onConfirm: null
 });
 
+export const sheetState = $state<{
+	open: boolean;
+	data: any | null;
+	spacePicker: boolean;
+}>({
+	open: false,
+	data: null,
+	spacePicker: false
+});
+
 export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $state({
 	pageTitle: '',
 	clr: 'purple',
@@ -63,13 +82,15 @@ export const sharedItem: {
 	text: string;
 	date: string;
 	url: string;
+	pinned: boolean;
 } = $state({
 	title: '',
 	img: noImageUrl,
 	link: '',
 	text: '',
 	url: '',
-	date: new Date().toLocaleDateString()
+	date: new Date().toLocaleDateString(),
+	pinned: false
 });
 
 export const cardPage: {
@@ -79,32 +100,40 @@ export const cardPage: {
 	text: string;
 	date: string;
 	url: string;
-	space?: Space;
+	pinned: boolean;
+	pinnedInSpace: boolean;
+	space: string;
 } = $state({
 	title: '',
 	img: noImageUrl,
 	link: '',
 	text: '',
 	url: '',
-	date: new Date().toLocaleDateString()
+	date: new Date().toLocaleDateString(),
+	pinned: false,
+	pinnedInSpace: false,
+	space: ''
 });
 
-export function restoreCardPage(): void {
-	try {
-		if (typeof sessionStorage !== 'undefined') {
-			const saved = sessionStorage.getItem('cardPage');
-			if (saved) {
-				const data = JSON.parse(saved);
-				cardPage.title = data.title || cardPage.title;
-				cardPage.img = data.img || cardPage.img;
-				cardPage.link = data.link || cardPage.link;
-				cardPage.text = data.text || cardPage.text;
-				cardPage.date = data.date || cardPage.date;
-				cardPage.url = data.url || cardPage.url;
+	export function restoreCardPage(): void {
+		try {
+			if (typeof sessionStorage !== 'undefined') {
+				const saved = sessionStorage.getItem('cardPage');
+				if (saved) {
+					const data = JSON.parse(saved);
+					cardPage.title = data.title || cardPage.title;
+					cardPage.img = data.img || cardPage.img;
+					cardPage.link = data.link || cardPage.link;
+					cardPage.text = data.text || cardPage.text;
+					cardPage.date = data.date || cardPage.date;
+					cardPage.url = data.url || cardPage.url;
+				cardPage.pinned = data.pinned ?? cardPage.pinned;
+				cardPage.pinnedInSpace = data.pinnedInSpace ?? cardPage.pinnedInSpace;
+				cardPage.space = data.space ?? cardPage.space;
 			}
-		}
-	} catch {}
-}
+			}
+		} catch {}
+	}
 
 export function saveCardPage(): void {
 	if (typeof sessionStorage !== 'undefined') {
@@ -116,7 +145,10 @@ export function saveCardPage(): void {
 				link: cardPage.link,
 				text: cardPage.text,
 				date: cardPage.date,
-				url: cardPage.url
+				url: cardPage.url,
+				pinned: cardPage.pinned,
+				pinnedInSpace: cardPage.pinnedInSpace,
+				space: cardPage.space
 			})
 		);
 	}
@@ -162,6 +194,7 @@ export const undoState = $state<{
 	message: string;
 	action: 'delete' | 'remove-from-space' | 'delete-space';
 	deletedItems: any[];
+	deletedSpaces: any[];
 	spaceMappings: Array<{ spaceName: string; items: any[] }>;
 	spaceName?: string;
 }>({
@@ -169,6 +202,7 @@ export const undoState = $state<{
 	message: '',
 	action: 'delete',
 	deletedItems: [],
+	deletedSpaces: [],
 	spaceMappings: []
 });
 
@@ -211,7 +245,46 @@ export function clearUndo() {
 	}
 	undoState.pending = false;
 	undoState.deletedItems = [];
+	undoState.deletedSpaces = [];
 	undoState.spaceMappings = [];
+}
+
+export function setUndoDeleteSpace(message: string, deletedSpaces: any[]) {
+	clearUndo();
+	undoState.message = message;
+	undoState.deletedSpaces = deletedSpaces;
+	undoState.action = 'delete-space';
+	undoState.pending = true;
+	undoTimeout = setTimeout(() => {
+		undoState.pending = false;
+		undoState.deletedSpaces = [];
+	}, 5000);
+}
+
+export function togglePinSelectedItems(context: 'home' | 'space' = 'home'): void {
+	const titles = home.selectedTitles;
+	if (titles.length === 0) return;
+
+	if (context === 'home') {
+		const items = localItems.current.filter((i: any) => titles.includes(i.title));
+		if (items.length === 0) return;
+		const allPinned = items.every((i: any) => i.pinned);
+		localItems.current.forEach((item: any) => {
+			if (titles.includes(item.title)) item.pinned = !allPinned;
+		});
+	} else if (context === 'space') {
+		const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
+		if (!space) return;
+		const items = space.items.filter((i: any) => titles.includes(i.title));
+		if (items.length === 0) return;
+		const allPinned = items.every((i: any) => i.pinnedInSpace);
+		space.items.forEach((item: any) => {
+			if (titles.includes(item.title)) item.pinnedInSpace = !allPinned;
+		});
+	}
+
+	home.selectedTitles = [];
+	home.selectMode = false;
 }
 
 export function performUndo() {
@@ -248,5 +321,136 @@ export function performUndo() {
 			}
 		}
 		clearUndo();
+	} else if (undoState.action === 'delete-space') {
+		const currentSpaces = [...localSpaces.current];
+		for (const spc of undoState.deletedSpaces) {
+			if (!currentSpaces.some((s: any) => s.name === spc.name)) {
+				currentSpaces.push(spc);
+			}
+		}
+		localSpaces.current = currentSpaces;
+		clearUndo();
 	}
+}
+
+export function scrollableVignette(node: HTMLElement, direction: 'horizontal' | 'vertical' = 'horizontal'): { destroy: () => void } {
+	function update() {
+		if (direction === 'horizontal') {
+			const canScrollLeft = node.scrollLeft > 0;
+			const canScrollRight = node.scrollLeft + node.clientWidth < node.scrollWidth;
+			if (canScrollLeft && canScrollRight) {
+				const g = 'linear-gradient(to right, transparent 4%, black 10%, black 90%, transparent 96%)';
+				node.style.setProperty('-webkit-mask-image', g);
+				node.style.setProperty('mask-image', g);
+			} else if (canScrollLeft) {
+				const g = 'linear-gradient(to right, transparent 4%, black 10%)';
+				node.style.setProperty('-webkit-mask-image', g);
+				node.style.setProperty('mask-image', g);
+			} else if (canScrollRight) {
+				const g = 'linear-gradient(to right, black 90%, transparent 96%)';
+				node.style.setProperty('-webkit-mask-image', g);
+				node.style.setProperty('mask-image', g);
+			} else {
+				node.style.removeProperty('-webkit-mask-image');
+				node.style.removeProperty('mask-image');
+			}
+		} else {
+			const canScrollUp = node.scrollTop > 0;
+			const canScrollDown = node.scrollTop + node.clientHeight < node.scrollHeight;
+			if (canScrollUp && canScrollDown) {
+				const g = 'linear-gradient(to bottom, transparent 4%, black 10%, black 90%, transparent 96%)';
+				node.style.setProperty('-webkit-mask-image', g);
+				node.style.setProperty('mask-image', g);
+			} else if (canScrollUp) {
+				const g = 'linear-gradient(to bottom, transparent 4%, black 10%)';
+				node.style.setProperty('-webkit-mask-image', g);
+				node.style.setProperty('mask-image', g);
+			} else if (canScrollDown) {
+				const g = 'linear-gradient(to bottom, black 90%, transparent 96%)';
+				node.style.setProperty('-webkit-mask-image', g);
+				node.style.setProperty('mask-image', g);
+			} else {
+				node.style.removeProperty('-webkit-mask-image');
+				node.style.removeProperty('mask-image');
+			}
+		}
+	}
+	const ro = new ResizeObserver(update);
+	ro.observe(node);
+	const mo = new MutationObserver(update);
+	mo.observe(node, { childList: true, subtree: true, characterData: true });
+	node.addEventListener('scroll', update, { passive: true });
+	update();
+	return {
+		destroy() {
+			ro.disconnect();
+			mo.disconnect();
+			node.removeEventListener('scroll', update);
+		}
+	};
+}
+
+export function longpress(node: HTMLElement, callback: () => void) {
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	let triggered = false;
+	let startX = 0;
+	let startY = 0;
+
+	function cancel() {
+		if (timer) { clearTimeout(timer); timer = null; }
+	}
+
+	function handlePointerDown(e: PointerEvent) {
+		if (e.button !== 0) return;
+		triggered = false;
+		startX = e.clientX;
+		startY = e.clientY;
+		timer = setTimeout(() => {
+			triggered = true;
+			callback();
+		}, 400);
+	}
+
+	function handlePointerUp() { cancel(); }
+	function handlePointerCancel() { cancel(); }
+	function handlePointerLeave() { cancel(); }
+
+	function handlePointerMove(e: PointerEvent) {
+		if (!timer) return;
+		const dx = e.clientX - startX;
+		const dy = e.clientY - startY;
+		if (dx * dx + dy * dy > 100) cancel();
+	}
+
+	function handleClickCapture(e: MouseEvent) {
+		if (triggered) {
+			e.stopPropagation();
+			e.preventDefault();
+			triggered = false;
+		}
+	}
+
+	function handleContextMenu(e: Event) {
+		if (triggered) e.preventDefault();
+	}
+
+	node.addEventListener('pointerdown', handlePointerDown);
+	node.addEventListener('pointerup', handlePointerUp);
+	node.addEventListener('pointercancel', handlePointerCancel);
+	node.addEventListener('pointerleave', handlePointerLeave);
+	node.addEventListener('pointermove', handlePointerMove);
+	node.addEventListener('click', handleClickCapture, true);
+	node.addEventListener('contextmenu', handleContextMenu);
+
+	return {
+		destroy() {
+			node.removeEventListener('pointerdown', handlePointerDown);
+			node.removeEventListener('pointerup', handlePointerUp);
+			node.removeEventListener('pointercancel', handlePointerCancel);
+			node.removeEventListener('pointerleave', handlePointerLeave);
+			node.removeEventListener('pointermove', handlePointerMove);
+			node.removeEventListener('click', handleClickCapture, true);
+			node.removeEventListener('contextmenu', handleContextMenu);
+		}
+	};
 }

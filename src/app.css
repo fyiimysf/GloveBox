@@ -25,10 +25,6 @@ body {
 	--breakpoint-xs: 24rem;
 }
 
-.gpu {
-	will-change: transform;
-}
-
 .gpu-layer {
 	contain: layout style paint;
 }

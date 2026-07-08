@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { fly, scale, slide, blur, fade } from 'svelte/transition';
 	import Cards from '$lib/components/Cards.svelte';
-	import { home, localSpaces, spaceview, confirmState, truncate, setUndoRemove } from '$lib/shared.svelte';
-	import { ArrowLeft, CircleDotDashed, CircleSlash, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
+	import { home, localSpaces, spaceview, confirmState, truncate, setUndoRemove, togglePinSelectedItems } from '$lib/shared.svelte';
+	import { ArrowLeft, CircleDotDashed, CircleSlash, Pin, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 
 	try {
@@ -48,8 +48,8 @@
 	}
 </script>
 
-<div in:blur|global class="gpu relative z-1 pb-16">
-	<div in:fly|global class="gpu grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
+<div in:blur|global class="transform-gpu relative z-1 pb-16">
+	<div in:fly|global class="transform-gpu grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
 		{#each reversedItems as itemCard (itemCard.title)}
 			<Cards
 				h1={itemCard.title}
@@ -61,6 +61,8 @@
 				item={itemCard}
 				selectMode={home.selectMode}
 				selected={home.selectedTitles.includes(itemCard.title)}
+				pinned={itemCard.pinnedInSpace}
+				spaceName={spaceview.pageTitle}
 				onselect={(checked) => {
 					if (checked) {
 						home.selectedTitles = [...home.selectedTitles, itemCard.title];
@@ -108,6 +110,12 @@
 					onclick={() => { spaceMenu = true; }}
 				>
 					<CircleDotDashed class="size-4" />
+				</button>
+				<button
+					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
+					onclick={() => togglePinSelectedItems('space')}
+				>
+					<Pin class="size-4" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"

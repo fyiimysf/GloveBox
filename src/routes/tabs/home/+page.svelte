@@ -2,13 +2,13 @@
 	import { blur, draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
 
-	import { cardPage, home, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, saveCardPage } from '../../../lib/shared.svelte';
+	import { cardPage, home, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, saveCardPage, togglePinSelectedItems, scrollableVignette, longpress } from '../../../lib/shared.svelte';
 	import {
 		ArrowDown,
 		ArrowLeft,
-		ChevronRight,
 		CircleMinus,
 		CircleDotDashed,
+		Pin,
 		Trash2,
 		Square,
 		CheckSquare,
@@ -27,7 +27,9 @@
 
 	let spaceMenu = $state(false);
 
-	let visibleItems = $derived([...localItems.current].reverse().slice(0, 8));
+	let pinnedItems = $derived([...localItems.current].filter((i: any) => i.pinned).reverse().slice(0, 16));
+	let recentItems = $derived([...localItems.current].filter((i: any) => !i.pinned).reverse().slice(0, 16));
+	let allVisibleItems = $derived([...pinnedItems, ...recentItems]);
 
 	function addSelectedToSpace(spc: any) {
 		let added = 0;
@@ -59,44 +61,60 @@
 		cardPage.text = item.text;
 		cardPage.date = item.date;
 		cardPage.url = item.url;
+		cardPage.pinned = item.pinned;
+		cardPage.pinnedInSpace = false;
+		cardPage.space = '';
 		saveCardPage();
 	}
 
 	function toggleSelectAll() {
-		let allSelected = visibleItems.every((item: any) => home.selectedTitles.includes(item.title));
+		let allSelected = allVisibleItems.every((item: any) => home.selectedTitles.includes(item.title));
 		if (allSelected) {
 			home.selectedTitles = [];
 		} else {
-			home.selectedTitles = visibleItems.map((item: any) => item.title);
+			home.selectedTitles = allVisibleItems.map((item: any) => item.title);
 		}
 	}
 </script>
 
-<!-- Saved Section -->
-
-<div in:blur class="relative z-5 grid space-y-3 pb-26">
+<div in:blur class="relative z-5 grid space-y-3">
 	{#if localItems.current.length > 0}
-		<a
-			href="/tabs/home/saved"
-			onclick={() => {
-				spaceview.clr = 'purple';
-			}}
-		>
-			<div class="flex items-stretch justify-between">
-				<p class="h3 p-1 font-thin">Saved</p>
-				<div class="p-3">
-					<ChevronRight />
+		{#if recentItems.length > 0}
+			<div class="flex items-center justify-between">
+				<p class="h3 p-0 font-thin">Recent</p>
+				<a
+					href="/tabs/home/saved"
+					onclick={() => { spaceview.clr = 'purple'; }}
+					class="text-sm font-medium text-primary-400 pr-1"
+				>Show All</a>
+			</div>
+			{#if pinnedItems.length > 0}
+				<div use:scrollableVignette={'horizontal'} class="flex gap-1 overflow-x-auto pb-2 snap-x ">
+					{#each recentItems as item, i (item.title)}
+						<div class="shrink-0 w-40 snap-start p-0.5" transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
+							{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
+						</div>
+					{/each}
 				</div>
-			</div>
-		</a>
+			{:else}
+				<div use:scrollableVignette={'vertical'} class="max-h-[calc(88dvh-10rem)] overflow-y-auto transform-gpu grid grid-cols-2 gap-3 pb-10 p-1">
+					{#each recentItems as item, i (item.title)}
+						<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
+							{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
+						</div>
+					{/each}
+				</div>
+			{/if}
+		{/if}
 
-		{#if home.homeLayout}
-			<div class="gpu grid grid-cols-1 gap-3">
-				{@render ListLocal()}
-			</div>
-		{:else}
-			<div class="gpu grid grid-cols-2 gap-3">
-				{@render ListLocal()}
+		{#if pinnedItems.length > 0}
+			<p class="h3 p-0 font-thin">Pinned</p>
+			<div use:scrollableVignette={'vertical'} class="xs:max-h-96 max-h-[calc(50dvh-10rem)] overflow-y-auto grid grid-cols-2 gap-3 pr-1 p-1">
+				{#each pinnedItems as item, i (item.title)}
+					<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
+						{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
+					</div>
+				{/each}
 			</div>
 		{/if}
 	{/if}
@@ -112,6 +130,12 @@
 	item?: any
 )}
 	<div
+		use:longpress={() => {
+			home.selectMode = true;
+			if (!home.selectedTitles.includes(item.title)) {
+				home.selectedTitles = [...home.selectedTitles, item.title];
+			}
+		}}
 		class="card-link bg-primary-900/30 card border-surface-200-800 card-hover divide-surface-200-800 block divide-y border-[2px] shadow-lg {home.selectMode ? 'cursor-pointer' : ''} {home.selectMode && home.selectedTitles.includes(item.title) ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-transparent shadow-lg shadow-primary-500/20' : ''} transition-all duration-200 relative"
 	>
 		{#if home.selectMode && home.selectedTitles.includes(item.title)}
@@ -146,9 +170,9 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="absolute right-3 mt-2 rounded-full bg-black/60 text-white shadow-lg"
+						class="absolute right-3 mt-2 rounded-full  text-white shadow-lg"
 						onclick={(e) => e.stopPropagation()}
-						><Link class="text-primary-200 size-7 p-1" /></a
+						><Link class=" size-7 p-1 mix-blend-difference backdrop-blur-sm rounded-lg" /></a
 					>
 				{/if}
 				<a
@@ -208,9 +232,9 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="absolute right-1 mt-1 rounded-full bg-black/60 text-white shadow-lg"
+						class="absolute right-1 mt-1 rounded-full text-white shadow-lg"
 						onclick={(e) => e.stopPropagation()}
-						><Link class="text-primary-200 size-6 p-1" /></a
+						><Link class=" size-6 p-1 mix-blend-difference backdrop-blur-sm rounded-lg"  /></a
 					>
 				{/if}
 				<a
@@ -243,21 +267,7 @@
 	</div>
 {/snippet}
 
-{#snippet ListLocal()}
-	{#each visibleItems as item, i (item.title)}
-		<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
-			{@render Card(
-				item.img,
-				item.title,
-				item.text,
-				item.link,
-				new Date().toLocaleDateString(),
-				home.homeLayout,
-				item
-			)}
-		</div>
-	{/each}
-{/snippet}
+
 
 {#if home.selectMode}
 	<div
@@ -268,7 +278,7 @@
 			class="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
 			onclick={toggleSelectAll}
 		>
-			{#if visibleItems.every((item: any) => home.selectedTitles.includes(item.title))}
+			{#if allVisibleItems.every((item: any) => home.selectedTitles.includes(item.title))}
 				<CheckSquare class="size-4" />
 				All
 			{:else}
@@ -284,6 +294,12 @@
 					onclick={() => { spaceMenu = true; }}
 				>
 					<CircleDotDashed class="size-4" />
+				</button>
+				<button
+					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
+					onclick={() => togglePinSelectedItems('home')}
+				>
+					<Pin class="size-4" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"

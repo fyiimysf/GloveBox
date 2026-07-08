@@ -39,27 +39,32 @@
 		Clipboard,
 		ChevronUpCircle,
 		CircleX,
-		Trash2
+		Trash2,
+		ChevronLeft,
+		Pin,
+		PinOff
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
-	import {
-		home,
-		localItems,
-		sharedItem,
-		space,
-		localSpaces,
-		cardPage,
-		first,
-		spaceview,
-		data_theme,
-		shareTarget,
-		confirmState,
-		undoState,
-		performUndo,
-		truncate,
-		setUndo,
-		setUndoRemove
-	} from '../lib/shared.svelte';
+import {
+	home,
+	localItems,
+	sharedItem,
+	space,
+	localSpaces,
+	cardPage,
+	first,
+	spaceview,
+	data_theme,
+	shareTarget,
+	confirmState,
+	sheetState,
+	undoState,
+	performUndo,
+	truncate,
+	setUndo,
+	setUndoRemove,
+	spaceSelect
+} from '../lib/shared.svelte';
 	// State
 	let imageFile: any = $state();
 	let navbarExpanded = $state(false);
@@ -78,7 +83,8 @@
 	$effect(() => {
 		document.documentElement.setAttribute('data-theme', data_theme.current.value);
 		if (page.route.id == '/tabs/space') {
-			home.spaceDelete = false;
+			spaceSelect.selectMode = false;
+			spaceSelect.selectedNames = [];
 		}
 		if (page.route.id !== '/tabs/home' && page.route.id !== '/tabs/home/saved' && page.route.id !== '/tabs/space/spaceview') {
 			home.selectMode = false;
@@ -177,10 +183,9 @@
 	let chipName = $state('');
 	function addItemToSpace(item: any) {
 		localSpaces.current.forEach((spc: any) => {
-			console.log(spc.name);
 			if (spc.name === chipName) {
-				console.log(spc);
-				spc.items.push(item);
+				const exists = spc.items.some((i: any) => i.title === item.title);
+				if (!exists) spc.items.push(item);
 			}
 		});
 	}
@@ -193,7 +198,7 @@
 		space.clr = 'purple';
 		space.name = space.desc = '';
 		chipName = '';
-		sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = url = '';
+		sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = sharedItem.pinned = url = '';
 	}
 	function handleTouchStart(e: TouchEvent) {
 		touchStartY = e.touches[0].clientY;
@@ -203,12 +208,95 @@
 		const target = e.currentTarget as HTMLElement;
 		if (dy > 50 && target.scrollTop === 0) closeExpanded();
 	}
+
+	function removeFromSheetSpace(spaceObj: any) {
+		const deletedItem = sheetState.data;
+		spaceObj.items = spaceObj.items.filter((item: any) => item.title !== sheetState.data.title);
+		spaceview.viewItems = spaceview.viewItems.filter((item: any) => item.title !== sheetState.data.title);
+		setUndoRemove(truncate(sheetState.data.title) + ' removed', [deletedItem], spaceObj.name);
+		toast.success(truncate(sheetState.data.title) + ' removed', { duration: 2000 });
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
+
+	function confirmRemoveFromSheetSpace(spaceObj: any) {
+		confirmState.open = true;
+		confirmState.title = 'Remove from ' + spaceObj.name + '?';
+		confirmState.message = sheetState.data.title;
+		confirmState.confirmText = 'Remove';
+		confirmState.onConfirm = () => removeFromSheetSpace(spaceObj);
+	}
+
+	function deleteSheetItem() {
+		const deletedItem = localItems.current.find((i: any) => i.title === sheetState.data.title);
+		const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+		for (const spc of localSpaces.current) {
+			if (spc.items.some((i: any) => i.title === sheetState.data.title)) {
+				spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
+			}
+		}
+		localItems.current = localItems.current.filter((item: any) => item.title !== sheetState.data.title);
+		localSpaces.current.forEach((spc: any) => {
+			spc.items = spc.items.filter((item: any) => item.title !== sheetState.data.title);
+		});
+		setUndo(truncate(sheetState.data.title) + ' Deleted', [deletedItem], spaceMappings);
+		toast(truncate(sheetState.data.title) + ' Deleted', { icon: '🗑️', duration: 2000 });
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
+
+	function confirmDeleteSheetItem() {
+		confirmState.open = true;
+		confirmState.title = 'Delete Item?';
+		confirmState.message = sheetState.data.title;
+		confirmState.confirmText = 'Delete';
+		confirmState.onConfirm = deleteSheetItem;
+	}
+
+	function addSheetItemToSpace(spaceObj: any) {
+		const exists = spaceObj.items.some((i: any) => i.title === sheetState.data.title);
+		if (exists) {
+			toast.error('Already in ' + spaceObj.name, { duration: 1500 });
+		} else {
+			spaceObj.items.push(sheetState.data);
+			toast.success('Added to ' + spaceObj.name, { duration: 1500 });
+		}
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
+
+	function toggleSheetPin() {
+		if (!sheetState.data) return;
+		sheetState.data.pinned = !sheetState.data.pinned;
+		const li = localItems.current.find((i: any) => i.title === sheetState.data.title);
+		if (li) li.pinned = sheetState.data.pinned;
+		localSpaces.current.forEach((spc: any) => {
+			const si = spc.items.find((i: any) => i.title === sheetState.data.title);
+			if (si) si.pinned = sheetState.data.pinned;
+		});
+		toast.success(sheetState.data.pinned ? 'Pinned to top' : 'Unpinned', { duration: 1500 });
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
+
+	function toggleSheetPinInSpace() {
+		if (!sheetState.data) return;
+		const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
+		if (!space) return;
+		const si = space.items.find((i: any) => i.title === sheetState.data.title);
+		if (si) si.pinnedInSpace = !si.pinnedInSpace;
+		const pinned = si?.pinnedInSpace ?? false;
+		sheetState.data.pinnedInSpace = pinned;
+		toast.success(pinned ? 'Pinned to ' + spaceview.pageTitle : 'Unpinned from ' + spaceview.pageTitle, { duration: 1500 });
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
 </script>
 
 <div class="flex justify-center w-screen">
 	<div class="grid h-screen w-full lg:max-w-[480px] grid-rows-[auto_1fr_auto] select-none">
 	<!-- Header -->
-	<header in:slide class="gpu sticky top-0 z-10 backdrop-blur-xl">
+	<header in:slide class="transform-gpu sticky top-0 z-10 backdrop-blur-xl">
 		<!-- <AppBarC title={value} {homeLayout}></AppBarC> -->
 		{#if !page.error && !first.current}
 			{@render Appbar(home.pageTitle, null)}
@@ -278,7 +366,7 @@
 	{#if undoState.pending}
 		<div
 			in:fly={{ y: 40, duration: 200 }}
-			class="gpu fixed bottom-26 left-1/2 z-50 flex w-full max-w-sm -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
+			class="transform-gpu fixed bottom-26 left-1/2 z-50 flex w-full max-w-sm -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
 		>
 			<span class="font-semibold text-white drop-shadow-sm">{undoState.message}</span>
 			<button
@@ -293,10 +381,10 @@
 	{#if dropMenu || spaceMenu}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="gpu fixed inset-0 z-40" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
+		<div class="transform-gpu fixed inset-0 z-40" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
 		<div
 			transition:fly={{ y: 100, duration: 200 }}
-			class="gpu fixed bottom-0 z-50 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] rounded-t-4xl bg-primary-900/70 px-6 pb-10 pt-4 shadow-2xl backdrop-blur-xl border-t border-white/10"
+			class="transform-gpu fixed bottom-0 z-50 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] rounded-t-4xl bg-primary-900/70 px-6 pb-10 pt-4 shadow-2xl backdrop-blur-xl border-t border-white/10"
 		>
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -309,11 +397,11 @@
 		{#if navbarExpanded}
 			<div
 				transition:blur={{ duration: 200 }}
-				class="gpu fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
+				class="transform-gpu fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
 				onclick={closeExpanded}
 			></div>
 		{/if}
-		<div transition:slide|global class="gpu fixed bottom-5 z-11 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] px-4">
+		<div transition:slide|global class="transform-gpu fixed bottom-5 z-11 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] px-4" class:opacity-0={page.route.id === '/tabs/space' && spaceSelect.selectMode} class:pointer-events-none={page.route.id === '/tabs/space' && spaceSelect.selectMode}>
 			<div
 				class="rounded-3xl border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
 			>
@@ -345,6 +433,7 @@
 									class="btn-icon bg-primary-400 z-20 h-12 w-10 rounded-lg px-6 "
 									onclick={() => {
 										url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
+										sharedItem.pinned = false;
 										chipName = '';
 										navbarExpanded = true;
 									}}
@@ -389,16 +478,163 @@
 	{#if confirmState.open}
 		<div
 			transition:fade={{duration:200}}
-			class="gpu fixed inset-0 z-200 flex items-center justify-center bg-black/60 backdrop-blur-md"
+			class="transform-gpu fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md"
 		>
 			{@render ConfirmDialogue()}
+		</div>
+	{/if}
+	{#if sheetState.open && sheetState.data}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			transition:fade={{ duration: 150 }}
+			onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
+			class="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+		>
+			<div
+				transition:fly={{ duration: 250, y: 200, opacity: 0 }}
+				onclick={(e) => e.stopPropagation()}
+				class="mx-auto w-full max-w-lg rounded-t-2xl border border-white/10 bg-primary-950/80 shadow-2xl backdrop-blur-xl"
+			>
+				<div class="flex justify-center pt-3 pb-1">
+					<div class="h-1.5 w-12 rounded-full bg-white/20"></div>
+				</div>
+
+				<div class="relative overflow-hidden">
+					<div
+						class="transition-all duration-200"
+						class:opacity-0={sheetState.spacePicker}
+						class:pointer-events-none={sheetState.spacePicker}
+					>
+						<div class="max-h-[65vh] overflow-y-auto">
+							<div class="px-4 pb-2">
+								<p class="truncate text-sm font-bold text-white/80">{sheetState.data.title}</p>
+							</div>
+							<div class="pb-2">
+								{#if sheetState.data.url !== ''}
+									<a
+										target="_blank"
+										href={sheetState.data.url}
+										onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
+										class="flex items-center justify-between rounded-xl px-4 py-3.5 text-yellow-300 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+									>
+										<span class="font-bold">Open Link</span>
+										<Link class="size-5 shrink-0" />
+									</a>
+									<hr class="mx-3 border-white/5" />
+								{/if}
+								{#each localSpaces.current as spaceObj}
+									{#each spaceObj.items as obj}
+										{#if obj.title === sheetState.data.title}
+											<button
+												onclick={() => confirmRemoveFromSheetSpace(spaceObj)}
+												class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-{spaceObj.clr}-400 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+											>
+												<span class="truncate font-bold">
+													Remove from <span class="font-bold">{spaceObj.name}</span>
+												</span>
+												<CircleOff class="size-5 shrink-0" />
+											</button>
+											<hr class="mx-3 border-white/5" />
+										{/if}
+									{/each}
+								{/each}
+								{#if page.route.id === '/tabs/space/spaceview'}
+									<button
+										onclick={toggleSheetPinInSpace}
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-blue-400 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
+									>
+										<span class="font-bold">{sheetState.data.pinnedInSpace ? 'Unpin from ' : 'Pin to '}{spaceview.pageTitle}</span>
+										{#if sheetState.data.pinnedInSpace}
+											<PinOff class="size-5 shrink-0" />
+										{:else}
+											<Pin class="size-5 shrink-0" />
+										{/if}
+									</button>
+									<hr class="mx-3 border-white/5" />
+								{/if}
+								{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
+									<button
+										onclick={() => (sheetState.spacePicker = true)}
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+									>
+										<span class="font-bold">Add to Space</span>
+										<CircleDotDashed class="size-5 shrink-0 text-white/40" />
+									</button>
+									<hr class="mx-3 border-white/5" />
+									<button
+										onclick={toggleSheetPin}
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-blue-400 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
+									>
+										<span class="font-bold">{sheetState.data.pinned ? 'Unpin' : 'Pin to Top'}</span>
+										{#if sheetState.data.pinned}
+											<PinOff class="size-5 shrink-0" />
+										{:else}
+											<Pin class="size-5 shrink-0" />
+										{/if}
+									</button>
+									<hr class="mx-3 border-white/5" />
+									<button
+										onclick={confirmDeleteSheetItem}
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-red-400 hover:bg-red-500/10 active:scale-[0.98] transition-all duration-150"
+									>
+										<span class="font-bold">Delete</span>
+										<Trash class="size-5 shrink-0" />
+									</button>
+								{/if}
+							</div>
+						</div>
+					</div>
+
+					<div
+						class="absolute inset-0 transition-all duration-200"
+						class:opacity-0={!sheetState.spacePicker}
+						class:pointer-events-none={!sheetState.spacePicker}
+					>
+						<div class="max-h-[65vh] overflow-y-auto">
+							<div class="flex items-center gap-2 px-4 pb-2">
+								<button
+									onclick={() => (sheetState.spacePicker = false)}
+									class="flex items-center gap-2 text-sm font-bold text-white/60 hover:text-white transition-colors duration-150"
+								>
+									<ChevronLeft class="size-5" />
+									<span>Add to Space</span>
+								</button>
+							</div>
+							<div class="px-1 pb-4">
+								{#each [...localSpaces.current].reverse() as item}
+									<button
+										onclick={() => addSheetItemToSpace(item)}
+										class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+									>
+										<span class="flex items-center gap-3 truncate">
+											<span class="h-3 w-3 shrink-0 rounded-full bg-{item.clr}-400"></span>
+											<span class="truncate font-bold">{item.name}</span>
+										</span>
+										<CircleDotDashed class="size-5 shrink-0 text-white/50" />
+									</button>
+								{/each}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="px-4 pb-4 pt-1">
+					<button
+						onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
+						class="w-full rounded-xl bg-white/10 py-3.5 text-center font-bold text-white/80 hover:bg-white/15 active:scale-[0.98] transition-all duration-150"
+					>
+						Cancel
+					</button>
+				</div>
+			</div>
 		</div>
 	{/if}
 </div>
 </div>
 
 {#snippet Appbar(title: string, children: any)}
-	<div transition:slide|global class="gpu">
+	<div transition:slide|global class="transform-gpu">
 		<AppBar classes="dark:bg-primary-950/80 gpu-layer">
 			{#snippet headline()}
 				{#if page.route.id === '/settings'}
@@ -452,37 +688,13 @@
 						/>
 					{/if}
 				{:else if page.route.id === '/tabs/home'}
-					{#if !home.homeLayout}
-						<StretchHorizontal
-							onclick={() => {
-								home.homeLayout = !home.homeLayout;
-							}}
-							class="size-7"
-						/>
-					{:else}
-						<LayoutGrid
-							onclick={() => {
-								home.homeLayout = !home.homeLayout;
-							}}
-							class="size-7"
-						/>
-					{/if}
+					<a href="/settings">
+						<Bolt class="size-7" />
+					</a>
 				{:else if page.route.id === '/tabs/space'}
-					{#if !home.savedLayout}
-						<ChevronDown
-							onclick={() => {
-								home.savedLayout = !home.savedLayout;
-							}}
-							class="size-7"
-						/>
-					{:else}
-						<ChevronUp
-							onclick={() => {
-								home.savedLayout = !home.savedLayout;
-							}}
-							class="size-7"
-						/>
-					{/if}
+					<a href="/settings" class="size-7">
+						<Bolt class="size-7" />
+					</a>
 				{/if}
 			{/snippet}
 
@@ -498,34 +710,27 @@
 							if (!home.selectMode) home.selectedTitles = [];
 						}}
 					/>
-					<a href="/settings">
-						<Bolt class="size-7" />
-					</a>
 				{:else if page.route.id === '/tabs/space'}
+				{#if !spaceSelect.expandAll}
+					<ChevronDown
+						onclick={() => { spaceSelect.expandAll = true; }}
+						class="size-7"
+					/>
+				{:else}
+					<ChevronUp
+						onclick={() => { spaceSelect.expandAll = false; }}
+						class="size-7"
+					/>
+				{/if}
 					{#if localSpaces.current.length > 0}
-						{#if home.spaceDelete}
-							<CircleX
-								class="size-7"
-								onclick={() => {
-									home.spaceDelete = false;
-								}}
-							/>
-						{:else}
-							<Trash
-								class="size-7"
-								onclick={() => {
-									home.spaceDelete = true;
-									toast('Select Spaces to Delete', {
-										
-										duration: 2000
-									});
-								}}
-							/>
-						{/if}
+						<SquareStack
+							class="size-7 {spaceSelect.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px rgba(168,85,247,0.6)]' : ''}"
+							onclick={() => {
+								spaceSelect.selectMode = !spaceSelect.selectMode;
+								if (!spaceSelect.selectMode) spaceSelect.selectedNames = [];
+							}}
+						/>
 					{/if}
-					<a href="/settings">
-						<Bolt class="size-7" />
-					</a>
 				{:else if page.route.id === '/settings'}
 					<a href="/info">
 						<Info class="size-7" />
@@ -787,14 +992,15 @@
 					</div>
 				{/if}
 				<article>
-					<button
-						type="submit"
-						disabled={loading ||
-							(url === '' && (sharedItem.title === '' || sharedItem.text === ''))}
-						class="btn {loading ||
-						(url === '' && (sharedItem.title === '' || sharedItem.text === ''))
-							? 'opacity-50'
-							: 'opacity-100'} preset-filled w-full rounded-xl p-3 font-medium"
+					<div class="flex items-center gap-2">
+						<button
+							type="submit"
+							disabled={loading ||
+								(url === '' && (sharedItem.title === '' || sharedItem.text === ''))}
+							class="btn flex-1 {loading ||
+							(url === '' && (sharedItem.title === '' || sharedItem.text === ''))
+								? 'opacity-50'
+								: 'opacity-100'} preset-filled rounded-xl p-3 font-medium"
 						onclick={() => {
 							if (url !== '' && ogData) {
 								if (ogData.image === '') {
@@ -857,6 +1063,19 @@
 							Add Item
 						{/if}
 					</button>
+					<button
+						type="button"
+						onclick={() => { sharedItem.pinned = !sharedItem.pinned; }}
+						class="flex items-center justify-center rounded-xl p-3 transition-colors {sharedItem.pinned ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/40 hover:text-white/70'}"
+						title={sharedItem.pinned ? 'Pinned' : 'Pin to top'}
+					>
+						{#if sharedItem.pinned}
+							<PinOff class="size-5" />
+						{:else}
+							<Pin class="size-5" />
+						{/if}
+					</button>
+				</div>
 				</article>
 				<button
 					type="button"

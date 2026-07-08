@@ -2,8 +2,8 @@
 	import { fly, scale, blur, slide, fade } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import Cards from '$lib/components/Cards.svelte';
-	import { home, localItems, localSpaces, confirmState, truncate, setUndo } from '$lib/shared.svelte';
-	import { ArrowLeft, CircleDotDashed, CircleMinus, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
+	import { home, localItems, localSpaces, confirmState, truncate, setUndo, togglePinSelectedItems } from '$lib/shared.svelte';
+	import { ArrowLeft, CircleDotDashed, CircleMinus, Pin, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 
 	let { data }: { data: PageData } = $props();
@@ -38,7 +38,7 @@
 </script>
 
 <div class="relative z-1 mb-20 grid space-y-6">
-	<div in:scale|global class="gpu">
+	<div in:scale|global class="transform-gpu">
 		<div class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
 			{#each reversedItems as _, i (_.title)}
 				<Cards
@@ -89,6 +89,12 @@
 					onclick={() => { spaceMenu = true; }}
 				>
 					<CircleDotDashed class="size-4" />
+				</button>
+				<button
+					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
+					onclick={() => togglePinSelectedItems('home')}
+				>
+					<Pin class="size-4" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
