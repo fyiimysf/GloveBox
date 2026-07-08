@@ -993,6 +993,18 @@ import {
 				{/if}
 				<article>
 					<div class="flex items-center gap-2">
+					<button
+						type="button"
+						onclick={() => { sharedItem.pinned = !sharedItem.pinned; }}
+						class="flex items-center justify-center rounded-xl p-3 transition-colors {sharedItem.pinned ? 'bg-tertiary-500/20 text-tertiary-400' : 'bg-white/5 text-white/30 hover:text-white/70'}"
+						title={sharedItem.pinned ? 'Pinned' : 'Pin to top'}
+					>
+						{#if sharedItem.pinned}
+						<Pin class="size-7" />
+						{:else}
+						<PinOff class="size-7" />
+						{/if}
+					</button>
 						<button
 							type="submit"
 							disabled={loading ||
@@ -1063,18 +1075,7 @@ import {
 							Add Item
 						{/if}
 					</button>
-					<button
-						type="button"
-						onclick={() => { sharedItem.pinned = !sharedItem.pinned; }}
-						class="flex items-center justify-center rounded-xl p-3 transition-colors {sharedItem.pinned ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-white/40 hover:text-white/70'}"
-						title={sharedItem.pinned ? 'Pinned' : 'Pin to top'}
-					>
-						{#if sharedItem.pinned}
-							<PinOff class="size-5" />
-						{:else}
-							<Pin class="size-5" />
-						{/if}
-					</button>
+					
 				</div>
 				</article>
 				<button
