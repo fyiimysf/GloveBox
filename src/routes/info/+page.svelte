@@ -3,6 +3,7 @@
 	import { Avatar } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowLeft, ArrowLeftIcon, ArrowUpRightFromSquare, Link2, Github, Instagram, Linkedin, Twitter } from 'lucide-svelte';
 	import { blur, slide } from 'svelte/transition';
+	import { haptic } from '$lib/shared.svelte';
 	let links = {
 		repo: 'https://github.com/fyiimysf/GloveBox',
 		github: 'https://github.com/fyiimysf',
@@ -84,12 +85,15 @@
 </div>
 <!-- Back Button -->
 <button
-	in:slide
+	in:slide|global={{delay:400}}
 	onclick={() => {
+		haptic('light');
 		history.back();
 	}}
-	class="btn bg-primary-950/70 fixed bottom-10 left-1/2 z-9 w-80 -translate-x-1/2 rounded-2xl backdrop-blur"
+	class="bg-surface-950/60 fixed bottom-0 left-1/2 z-9 w-[90vw] -translate-x-1/2 rounded-t-2xl backdrop-blur-xs"
 >
-	<ArrowLeft />
-	Go Back
+	<span class="btn py-3">
+		<ArrowLeft />
+		Go Back
+	</span>
 </button>

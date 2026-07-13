@@ -10,6 +10,7 @@ export class LocalStorage<T> {
 	#parsed: any = null;
 
 	#handler = (e: StorageEvent) => {
+		if (!e) return;
 		if (e.storageArea !== localStorage) return;
 		if (e.key !== this.#key) return;
 		this.#version += 1;
@@ -27,10 +28,15 @@ export class LocalStorage<T> {
 	}
 
 	#read() {
-		const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(this.#key) : null;
-		if (raw === this.#raw && this.#parsed !== null) return this.#parsed;
-		this.#raw = raw;
-		this.#parsed = raw ? JSON.parse(raw) : this.#value;
+		try {
+			const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(this.#key) : null;
+			if (raw === this.#raw && this.#parsed !== null) return this.#parsed;
+			this.#raw = raw;
+			this.#parsed = raw ? JSON.parse(raw) : this.#value;
+		} catch {
+			this.#parsed = this.#value;
+			this.#raw = null;
+		}
 		return this.#parsed;
 	}
 
@@ -47,10 +53,14 @@ export class LocalStorage<T> {
 				set: (target, property, value) => {
 					this.#version += 1;
 					Reflect.set(target, property, value);
-					if (typeof localStorage !== 'undefined') {
-						localStorage.setItem(this.#key, JSON.stringify(this.#parsed));
-						this.#raw = null;
+					try {
+						if (typeof localStorage !== 'undefined') {
+							localStorage.setItem(this.#key, JSON.stringify(this.#parsed));
+						}
+					} catch (err) {
+						console.error('Failed to persist ' + this.#key, err);
 					}
+					this.#raw = null;
 					return true;
 				}
 			});
@@ -84,8 +94,12 @@ export class LocalStorage<T> {
 	}
 
 	set current(value) {
-		if (typeof localStorage !== 'undefined') {
-			localStorage.setItem(this.#key, JSON.stringify(value));
+		try {
+			if (typeof localStorage !== 'undefined') {
+				localStorage.setItem(this.#key, JSON.stringify(value));
+			}
+		} catch (err) {
+			console.error('Failed to persist ' + this.#key, err);
 		}
 		this.#raw = null;
 		this.#version += 1;

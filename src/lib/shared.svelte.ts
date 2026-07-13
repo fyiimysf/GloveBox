@@ -7,6 +7,11 @@ import type { Combobox } from '@skeletonlabs/skeleton-svelte';
 
 // place files you want to import through the `$lib` alias in this folder.
 
+export function haptic(type: 'light' | 'medium' | 'heavy' = 'light') {
+	if (!navigator.vibrate) return;
+	navigator.vibrate(type === 'light' ? 10 : type === 'medium' ? 25 : 50);
+}
+
 export const firstTime = $state({ value: true });
 
 export const comboboxData: ComboboxData[] = [
@@ -69,6 +74,8 @@ export const sheetState = $state<{
 	spacePicker: false
 });
 
+export const onboardingView = $state({ active: false });
+
 export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $state({
 	pageTitle: '',
 	clr: 'purple',
@@ -78,6 +85,7 @@ export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $st
 export const sharedItem: {
 	title: string;
 	img: any;
+	images: string[];
 	link: string;
 	text: string;
 	date: string;
@@ -86,6 +94,7 @@ export const sharedItem: {
 } = $state({
 	title: '',
 	img: noImageUrl,
+	images: [],
 	link: '',
 	text: '',
 	url: '',
@@ -96,6 +105,7 @@ export const sharedItem: {
 export const cardPage: {
 	title: string;
 	img: any;
+	images: string[];
 	link: string;
 	text: string;
 	date: string;
@@ -106,6 +116,7 @@ export const cardPage: {
 } = $state({
 	title: '',
 	img: noImageUrl,
+	images: [],
 	link: '',
 	text: '',
 	url: '',
@@ -123,6 +134,7 @@ export const cardPage: {
 					const data = JSON.parse(saved);
 					cardPage.title = data.title || cardPage.title;
 					cardPage.img = data.img || cardPage.img;
+					cardPage.images = data.images || (data.img ? [data.img] : []);
 					cardPage.link = data.link || cardPage.link;
 					cardPage.text = data.text || cardPage.text;
 					cardPage.date = data.date || cardPage.date;
@@ -142,6 +154,7 @@ export function saveCardPage(): void {
 			JSON.stringify({
 				title: cardPage.title,
 				img: cardPage.img,
+				images: cardPage.images,
 				link: cardPage.link,
 				text: cardPage.text,
 				date: cardPage.date,
@@ -262,73 +275,83 @@ export function setUndoDeleteSpace(message: string, deletedSpaces: any[]) {
 }
 
 export function togglePinSelectedItems(context: 'home' | 'space' = 'home'): void {
-	const titles = home.selectedTitles;
-	if (titles.length === 0) return;
+	try {
+		const titles = home.selectedTitles;
+		if (titles.length === 0) return;
 
-	if (context === 'home') {
-		const items = localItems.current.filter((i: any) => titles.includes(i.title));
-		if (items.length === 0) return;
-		const allPinned = items.every((i: any) => i.pinned);
-		localItems.current.forEach((item: any) => {
-			if (titles.includes(item.title)) item.pinned = !allPinned;
-		});
-	} else if (context === 'space') {
-		const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
-		if (!space) return;
-		const items = space.items.filter((i: any) => titles.includes(i.title));
-		if (items.length === 0) return;
-		const allPinned = items.every((i: any) => i.pinnedInSpace);
-		space.items.forEach((item: any) => {
-			if (titles.includes(item.title)) item.pinnedInSpace = !allPinned;
-		});
+		if (context === 'home') {
+			const items = localItems.current.filter((i: any) => titles.includes(i.title));
+			if (items.length === 0) return;
+			const allPinned = items.every((i: any) => i.pinned);
+			localItems.current.forEach((item: any) => {
+				if (titles.includes(item.title)) item.pinned = !allPinned;
+			});
+		} else if (context === 'space') {
+			const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
+			if (!space) return;
+			const items = space.items.filter((i: any) => titles.includes(i.title));
+			if (items.length === 0) return;
+			const allPinned = items.every((i: any) => i.pinnedInSpace);
+			space.items.forEach((item: any) => {
+				if (titles.includes(item.title)) item.pinnedInSpace = !allPinned;
+			});
+		}
+
+		home.selectedTitles = [];
+		home.selectMode = false;
+	} catch (err) {
+		console.error('Failed to toggle pin:', err);
+		home.selectedTitles = [];
+		home.selectMode = false;
 	}
-
-	home.selectedTitles = [];
-	home.selectMode = false;
 }
 
 export function performUndo() {
 	if (!undoState.pending) return;
-
-	if (undoState.action === 'delete') {
-		const currentItems = [...localItems.current];
-		for (const item of undoState.deletedItems) {
-			if (!currentItems.some((i: any) => i.title === item.title)) {
-				currentItems.push(item);
+	try {
+		if (undoState.action === 'delete') {
+			const currentItems = [...localItems.current];
+			for (const item of undoState.deletedItems) {
+				if (!currentItems.some((i: any) => i.title === item.title)) {
+					currentItems.push(item);
+				}
 			}
-		}
-		localItems.current = currentItems;
+			localItems.current = currentItems;
 
-		for (const { spaceName, items } of undoState.spaceMappings) {
-			const space = localSpaces.current.find((s: any) => s.name === spaceName);
+			for (const { spaceName, items } of undoState.spaceMappings) {
+				const space = localSpaces.current.find((s: any) => s.name === spaceName);
+				if (space) {
+					for (const item of items) {
+						if (!space.items.some((i: any) => i.title === item.title)) {
+							space.items.push(item);
+						}
+					}
+				}
+			}
+
+			clearUndo();
+		} else if (undoState.action === 'remove-from-space') {
+			const space = localSpaces.current.find((s: any) => (s as any).name === undoState.spaceName);
 			if (space) {
-				for (const item of items) {
+				for (const item of undoState.deletedItems) {
 					if (!space.items.some((i: any) => i.title === item.title)) {
 						space.items.push(item);
 					}
 				}
 			}
-		}
-
-		clearUndo();
-	} else if (undoState.action === 'remove-from-space') {
-		const space = localSpaces.current.find((s: any) => (s as any).name === undoState.spaceName);
-		if (space) {
-			for (const item of undoState.deletedItems) {
-				if (!space.items.some((i: any) => i.title === item.title)) {
-					space.items.push(item);
+			clearUndo();
+		} else if (undoState.action === 'delete-space') {
+			const currentSpaces = [...localSpaces.current];
+			for (const spc of undoState.deletedSpaces) {
+				if (!currentSpaces.some((s: any) => s.name === spc.name)) {
+					currentSpaces.push(spc);
 				}
 			}
+			localSpaces.current = currentSpaces;
+			clearUndo();
 		}
-		clearUndo();
-	} else if (undoState.action === 'delete-space') {
-		const currentSpaces = [...localSpaces.current];
-		for (const spc of undoState.deletedSpaces) {
-			if (!currentSpaces.some((s: any) => s.name === spc.name)) {
-				currentSpaces.push(spc);
-			}
-		}
-		localSpaces.current = currentSpaces;
+	} catch (err) {
+		console.error('Undo failed:', err);
 		clearUndo();
 	}
 }
@@ -390,24 +413,39 @@ export function scrollableVignette(node: HTMLElement, direction: 'horizontal' | 
 	};
 }
 
-export function longpress(node: HTMLElement, callback: () => void) {
+export function longpress(node: HTMLElement, options: (() => void) | { onFirst?: () => void; onSecond?: () => void }) {
 	let timer: ReturnType<typeof setTimeout> | null = null;
+	let secondTimer: ReturnType<typeof setTimeout> | null = null;
 	let triggered = false;
+	let secondTriggered = false;
 	let startX = 0;
 	let startY = 0;
 
+	const onFirst = typeof options === 'function' ? options : options.onFirst;
+	const onSecond = typeof options === 'function' ? undefined : options.onSecond;
+
 	function cancel() {
 		if (timer) { clearTimeout(timer); timer = null; }
+		if (secondTimer) { clearTimeout(secondTimer); secondTimer = null; }
 	}
 
 	function handlePointerDown(e: PointerEvent) {
 		if (e.button !== 0) return;
 		triggered = false;
+		secondTriggered = false;
 		startX = e.clientX;
 		startY = e.clientY;
 		timer = setTimeout(() => {
 			triggered = true;
-			callback();
+			haptic('medium');
+			if (onFirst) onFirst();
+			if (onSecond) {
+				secondTimer = setTimeout(() => {
+					secondTriggered = true;
+					haptic('heavy');
+					onSecond();
+				}, 400);
+			}
 		}, 400);
 	}
 
@@ -423,15 +461,16 @@ export function longpress(node: HTMLElement, callback: () => void) {
 	}
 
 	function handleClickCapture(e: MouseEvent) {
-		if (triggered) {
+		if (triggered || secondTriggered) {
 			e.stopPropagation();
 			e.preventDefault();
 			triggered = false;
+			secondTriggered = false;
 		}
 	}
 
 	function handleContextMenu(e: Event) {
-		if (triggered) e.preventDefault();
+		if (triggered || secondTriggered) e.preventDefault();
 	}
 
 	node.addEventListener('pointerdown', handlePointerDown);

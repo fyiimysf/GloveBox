@@ -1,8 +1,10 @@
 <script lang="ts">
 	import Cards from '$lib/components/Cards.svelte';
-	import { cardPage, home, localSpaces, space, spaceview, confirmState, saveSpaceviewName, spaceSelect, setUndoDeleteSpace, scrollableVignette, longpress } from '$lib/shared.svelte';
+	import { cardPage, home, localSpaces, space, spaceview, confirmState, saveSpaceviewName, spaceSelect, setUndoDeleteSpace, scrollableVignette, longpress, haptic } from '$lib/shared.svelte';
 	import {
 		ArrowDown,
+		ArrowDownCircle,
+		ArrowUpCircle,
 		CircleMinus,
 		CircleSlash,
 		Trash,
@@ -16,8 +18,29 @@
 	} from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 	import { fly, blur, fade, slide } from 'svelte/transition';
+	import { flip } from 'svelte/animate';
 
 	let expandedSpaces = $state<string[]>([]);
+
+	function moveSpaceDown(name: string) {
+		haptic('light');
+		const idx = localSpaces.current.findIndex((s: any) => s.name === name);
+		if (idx > 0) {
+			const arr = [...localSpaces.current];
+			[arr[idx], arr[idx - 1]] = [arr[idx - 1], arr[idx]];
+			localSpaces.current = arr;
+		}
+	}
+
+	function moveSpaceUp(name: string) {
+		haptic('light');
+		const idx = localSpaces.current.findIndex((s: any) => s.name === name);
+		if (idx < localSpaces.current.length - 1) {
+			const arr = [...localSpaces.current];
+			[arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+			localSpaces.current = arr;
+		}
+	}
 
 	$effect(() => {
 		if (spaceSelect.expandAll) {
@@ -50,6 +73,7 @@
 	}
 
 	function toggleSelectAll() {
+		haptic('light');
 		let allSelected = [...localSpaces.current].every((spc: any) => spaceSelect.selectedNames.includes(spc.name));
 		if (allSelected) {
 			spaceSelect.selectedNames = [];
@@ -60,6 +84,7 @@
 
 	function handleSpaceClick(name: string) {
 		if (spaceSelect.selectMode) {
+			haptic('light');
 			if (spaceSelect.selectedNames.includes(name)) {
 				spaceSelect.selectedNames = spaceSelect.selectedNames.filter(n => n !== name);
 			} else {
@@ -74,9 +99,18 @@
 	}
 </script>
 
-<div class="z-10 space-y-4 pb-26" in:blur>
-	{#each [...localSpaces.current].reverse() as spaceItem (spaceItem.name)}
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="z-10  content-start space-y-4 pb-26" in:blur onclick={(e) => {
+	if (spaceSelect.selectMode && !(e.target as HTMLElement).closest('.space-item')) {
+		spaceSelect.selectMode = false;
+		spaceSelect.selectedNames = [];
+	}
+}}>
+	<div class="space-y-4">
+		{#each [...localSpaces.current].reverse() as spaceItem (spaceItem.name)}
 		<div
+			animate:flip={{ duration: 250 }}
 			use:longpress={() => {
 				spaceSelect.selectMode = true;
 				if (!spaceSelect.selectedNames.includes(spaceItem.name)) {
@@ -84,7 +118,7 @@
 				}
 			}}
 			transition:fly={{ delay: 0, x: 100 }}
-			class="transform-gpu relative
+			class="space-item transform-gpu relative
 			{spaceItem.clr === 'purple'
 				? 'bg-purple-400/10 text-purple-400 outline-purple-400'
 				: spaceItem.clr === 'red'
@@ -134,7 +168,19 @@
 				<div class="flex items-center gap-2 pr-3 pt-2.5">
 					{#if spaceSelect.selectMode}
 						<div
-							onclick={(e) => { e.stopPropagation(); handleSpaceClick(spaceItem.name); }}
+							onclick={(e) => { e.stopPropagation(); haptic('light'); moveSpaceUp(spaceItem.name); }}
+							class="cursor-pointer"
+						>
+							<ArrowUpCircle class="size-5 text-white/40 transition-colors hover:text-white/70" />
+						</div>
+						<div
+							onclick={(e) => { e.stopPropagation(); haptic('light'); moveSpaceDown(spaceItem.name); }}
+							class="cursor-pointer"
+						>
+							<ArrowDownCircle class="size-5 text-white/40 transition-colors hover:text-white/70" />
+						</div>
+						<div
+							onclick={(e) => { e.stopPropagation(); haptic('light'); handleSpaceClick(spaceItem.name); }}
 							class="cursor-pointer"
 						>
 							{#if spaceSelect.selectedNames.includes(spaceItem.name)}
@@ -153,7 +199,7 @@
 				</div>
 			</div>
 			{#if isExpanded(spaceItem.name)}
-				<div transition:slide class="p-2 relative max-h-80 overflow-y-scroll max-w-[93svw]">
+				<div transition:slide class="p-2 relative max-h-80 overflow-y-scroll max-w-[93svw] ">
 					{#if spaceItem.items.length < 1}
 						<div
 							class="
@@ -229,7 +275,7 @@
 						</div>
 					{:else}
 						<div use:scrollableVignette={'horizontal'} class="flex gap-2 overflow-x-auto rounded-2xl p-1.5">
-							{#each [...spaceItem.items].reverse().slice(0, 2) as itemCard (itemCard.title)}
+							{#each [...spaceItem.items].reverse() as itemCard (itemCard.title)}
 								<button
 									class="shrink-0 w-45"
 									onclick={() => {
@@ -259,7 +305,7 @@
 				</div>
 			{/if}
 			<button
-				onclick={(e) => { e.stopPropagation(); toggleExpand(spaceItem.name); }}
+				onclick={(e) => { e.stopPropagation(); haptic('light'); toggleExpand(spaceItem.name); }}
 				class="flex w-full cursor-pointer items-center justify-center gap-2 py-3 text-white/60 transition-colors hover:text-white
 				{spaceItem.clr === 'purple'
 					? 'bg-purple-400/30 '
@@ -287,6 +333,7 @@
 			</button>
 		</div>
 	{/each}
+	</div>
 </div>
 
 {#if spaceSelect.selectMode}
@@ -312,6 +359,7 @@
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
 					onclick={() => {
+						haptic('medium');
 						confirmState.open = true;
 						confirmState.title = 'Delete ' + spaceSelect.selectedNames.length + ' spaces?';
 						confirmState.message = 'All items in these spaces will be kept';
@@ -336,6 +384,7 @@
 				<button
 					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
 					onclick={() => {
+						haptic('light');
 						spaceSelect.selectedNames = [];
 						spaceSelect.selectMode = false;
 					}}
@@ -364,7 +413,7 @@
 	in:blur={{ delay: 100 }}
 	class="fixed {localSpaces.current.length < 1
 		? 'inset-0'
-		: ''} bottom-25 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
+		: ''} bottom-28 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
 >
 	{#if localSpaces.current.length < 1}
 		<p class="animate-bounce">Add a Space</p>

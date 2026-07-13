@@ -2,7 +2,7 @@
 	import { blur, draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
 
-	import { cardPage, home, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, saveCardPage, togglePinSelectedItems, scrollableVignette, longpress } from '../../../lib/shared.svelte';
+	import { cardPage, home, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, saveCardPage, togglePinSelectedItems, scrollableVignette, longpress, sheetState, haptic } from '../../../lib/shared.svelte';
 	import {
 		ArrowDown,
 		ArrowLeft,
@@ -32,24 +32,32 @@
 	let allVisibleItems = $derived([...pinnedItems, ...recentItems]);
 
 	function addSelectedToSpace(spc: any) {
-		let added = 0;
-		for (const title of home.selectedTitles) {
-			const item = localItems.current.find((i: any) => i.title === title);
-			if (item && !spc.items.some((i: any) => i.title === title)) {
-				spc.items.push(item);
-				added++;
+		try {
+			let added = 0;
+			for (const title of home.selectedTitles) {
+				const item = localItems.current.find((i: any) => i.title === title);
+				if (item && !spc.items.some((i: any) => i.title === title)) {
+					spc.items.push(item);
+					added++;
+				}
 			}
+			toast.success(added + ' items added to ' + spc.name, { duration: 2000 });
+			haptic('medium');
+		} catch (err) {
+			console.error('Failed to add selected to space:', err);
+			toast.error('Failed to add items to space', { duration: 2000 });
 		}
 		home.selectedTitles = [];
 		home.selectMode = false;
 		spaceMenu = false;
-		toast.success(added + ' items added to ' + spc.name, { duration: 2000 });
 	}
 
 	function handleCardClick(item: any) {
 		if (home.selectMode) {
+			haptic('light');
 			if (home.selectedTitles.includes(item.title)) {
 				home.selectedTitles = home.selectedTitles.filter((t: string) => t !== item.title);
+				if (home.selectedTitles.length === 0) home.selectMode = false;
 			} else {
 				home.selectedTitles = [...home.selectedTitles, item.title];
 			}
@@ -57,6 +65,7 @@
 		}
 		cardPage.title = item.title;
 		cardPage.img = item.img;
+		cardPage.images = item.images || (item.img ? [item.img] : []);
 		cardPage.link = item.link;
 		cardPage.text = item.text;
 		cardPage.date = item.date;
@@ -68,6 +77,7 @@
 	}
 
 	function toggleSelectAll() {
+		haptic('light');
 		let allSelected = allVisibleItems.every((item: any) => home.selectedTitles.includes(item.title));
 		if (allSelected) {
 			home.selectedTitles = [];
@@ -77,11 +87,16 @@
 	}
 </script>
 
-<div in:blur class="relative z-5 grid space-y-3">
+<div in:blur class="relative z-5 grid content-start space-y-3" onclick={(e) => {
+	if (home.selectMode && !(e.target as HTMLElement).closest('.card-link')) {
+		home.selectMode = false;
+		home.selectedTitles = [];
+	}
+}}>
 	{#if localItems.current.length > 0}
 		{#if recentItems.length > 0}
 			<div class="flex items-center justify-between">
-				<p class="h3 p-0 font-thin">Recent</p>
+				<p class="h3 p-0 font-thin">Recent <span class="text-sm font-normal align-middle text-white/40">{localItems.current.length}</span></p>
 				<a
 					href="/tabs/home/saved"
 					onclick={() => { spaceview.clr = 'purple'; }}
@@ -130,10 +145,19 @@
 	item?: any
 )}
 	<div
-		use:longpress={() => {
-			home.selectMode = true;
-			if (!home.selectedTitles.includes(item.title)) {
-				home.selectedTitles = [...home.selectedTitles, item.title];
+		use:longpress={{
+			onFirst: () => {
+				home.selectMode = true;
+				if (!home.selectedTitles.includes(item.title)) {
+					home.selectedTitles = [...home.selectedTitles, item.title];
+				}
+			},
+			onSecond: () => {
+				home.selectMode = false;
+				home.selectedTitles = [];
+				sheetState.open = true;
+				sheetState.data = item;
+				sheetState.spacePicker = false;
 			}
 		}}
 		class="card-link bg-primary-900/30 card border-surface-200-800 card-hover divide-surface-200-800 block divide-y border-[2px] shadow-lg {home.selectMode ? 'cursor-pointer' : ''} {home.selectMode && home.selectedTitles.includes(item.title) ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-transparent shadow-lg shadow-primary-500/20' : ''} transition-all duration-200 relative"
@@ -146,13 +170,14 @@
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="transition-all duration-200">
 				{#if home.selectMode}
-					<div
-						class="absolute top-2 right-2 z-20"
-						onclick={(e) => {
-							e.stopPropagation();
-							handleCardClick(item);
-						}}
-					>
+				<div
+					class="absolute top-2 right-2 z-20"
+					onclick={(e) => {
+						e.stopPropagation();
+						haptic('light');
+						handleCardClick(item);
+					}}
+				>
 						{#if home.selectedTitles.includes(item.title)}
 							<CheckSquare class="size-6 text-primary-400 drop-shadow-md" />
 						{:else}
@@ -213,13 +238,14 @@
 					<DropDown data={item} />
 				</div>
 				{#if home.selectMode}
-					<div
-						class="absolute top-1 right-1 z-20"
-						onclick={(e) => {
-							e.stopPropagation();
-							handleCardClick(item);
-						}}
-					>
+				<div
+					class="absolute top-1 right-1 z-20"
+					onclick={(e) => {
+						e.stopPropagation();
+						haptic('light');
+						handleCardClick(item);
+					}}
+				>
 						{#if home.selectedTitles.includes(item.title)}
 							<CheckSquare class="size-5 text-primary-400 drop-shadow-md" />
 						{:else}
@@ -297,41 +323,47 @@
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
-					onclick={() => togglePinSelectedItems('home')}
+					onclick={() => { haptic('light'); togglePinSelectedItems('home'); }}
 				>
 					<Pin class="size-4" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
 					onclick={() => {
+						haptic('medium');
 						confirmState.open = true;
 						confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
 						confirmState.message = 'This will remove them from all spaces too';
 						confirmState.confirmText = 'Delete All';
 						confirmState.onConfirm = () => {
-							let titles = home.selectedTitles;
-							const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
-							const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-							for (const spc of localSpaces.current) {
-								const matching = spc.items.filter((i: any) => titles.includes(i.title));
-								if (matching.length > 0) {
-									spaceMappings.push({ spaceName: spc.name, items: matching });
+							try {
+								let titles = home.selectedTitles;
+								const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
+								const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+								for (const spc of localSpaces.current) {
+									const matching = spc.items.filter((i: any) => titles.includes(i.title));
+									if (matching.length > 0) {
+										spaceMappings.push({ spaceName: spc.name, items: matching });
+									}
 								}
-							}
-							let tempArr = localItems.current.filter(
-								(item: any) => !titles.includes(item.title)
-							);
-							localItems.current = tempArr;
-							localSpaces.current.forEach((spc: any) => {
-								spc.items = spc.items.filter(
+								let tempArr = localItems.current.filter(
 									(item: any) => !titles.includes(item.title)
 								);
-							});
+								localItems.current = tempArr;
+								localSpaces.current.forEach((spc: any) => {
+									spc.items = spc.items.filter(
+										(item: any) => !titles.includes(item.title)
+									);
+								});
+								const msg = titles.length + ' items Deleted';
+								setUndo(msg, deletedItems, spaceMappings);
+								toast.success(msg, { duration: 2000 });
+							} catch (err) {
+								console.error('Failed to delete items:', err);
+								toast.error('Failed to delete items', { duration: 2000 });
+							}
 							home.selectedTitles = [];
 							home.selectMode = false;
-							const msg = titles.length + ' items Deleted';
-							setUndo(msg, deletedItems, spaceMappings);
-							toast.success(msg, { duration: 2000 });
 						};
 					}}
 				>
@@ -340,6 +372,7 @@
 				<button
 					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
 					onclick={() => {
+						haptic('light');
 						home.selectedTitles = [];
 						home.selectMode = false;
 					}}
@@ -367,7 +400,7 @@
 		<div class="mb-2 flex items-center justify-between">
 			<span class="text-sm font-bold text-white/80">Add {home.selectedTitles.length} items to...</span>
 			<button
-				onclick={() => { spaceMenu = false; }}
+				onclick={() => { haptic('light'); spaceMenu = false; }}
 				class="rounded-xl p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
 			>
 				<X class="size-4" />
@@ -399,7 +432,7 @@
 </div>
 <div
 	in:blur={{ delay: 100 }}
-	class="fixed inset-0 bottom-25 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
+	class="fixed inset-0 bottom-28 z-0 flex flex-col items-center justify-end text-gray-300 opacity-40"
 >
 	{#if localItems.current.length < 1}
 		<p class="animate-bounce">Add an Item</p>

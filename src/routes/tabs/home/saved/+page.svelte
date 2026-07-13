@@ -2,7 +2,7 @@
 	import { fly, scale, blur, slide, fade } from 'svelte/transition';
 	import type { PageData } from './$types';
 	import Cards from '$lib/components/Cards.svelte';
-	import { home, localItems, localSpaces, confirmState, truncate, setUndo, togglePinSelectedItems } from '$lib/shared.svelte';
+	import { home, localItems, localSpaces, confirmState, truncate, setUndo, togglePinSelectedItems, haptic } from '$lib/shared.svelte';
 	import { ArrowLeft, CircleDotDashed, CircleMinus, Pin, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
 
@@ -13,21 +13,28 @@
 	let reversedItems = $derived([...localItems.current].reverse());
 
 	function addSelectedToSpace(spc: any) {
-		let added = 0;
-		for (const title of home.selectedTitles) {
-			const item = localItems.current.find((i: any) => i.title === title);
-			if (item && !spc.items.some((i: any) => i.title === title)) {
-				spc.items.push(item);
-				added++;
+		try {
+			let added = 0;
+			for (const title of home.selectedTitles) {
+				const item = localItems.current.find((i: any) => i.title === title);
+				if (item && !spc.items.some((i: any) => i.title === title)) {
+					spc.items.push(item);
+					added++;
+				}
 			}
+			toast.success(added + ' items added to ' + spc.name, { duration: 2000 });
+			haptic('medium');
+		} catch (err) {
+			console.error('Failed to add selected to space:', err);
+			toast.error('Failed to add items to space', { duration: 2000 });
 		}
 		home.selectedTitles = [];
 		home.selectMode = false;
 		spaceMenu = false;
-		toast.success(added + ' items added to ' + spc.name, { duration: 2000 });
 	}
 
 	function toggleSelectAll() {
+		haptic('light');
 		let allSelected = reversedItems.every((item: any) => home.selectedTitles.includes(item.title));
 		if (allSelected) {
 			home.selectedTitles = [];
@@ -37,14 +44,19 @@
 	}
 </script>
 
-<div class="relative z-1 mb-20 grid space-y-6">
+<div class="relative z-1 mb-20 grid min-h-dvh content-start space-y-6" onclick={(e) => {
+	if (home.selectMode && !(e.target as HTMLElement).closest('.card')) {
+		home.selectMode = false;
+		home.selectedTitles = [];
+	}
+}}>
 	<div in:scale|global class="transform-gpu">
 		<div class="grid {home.savedLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
 			{#each reversedItems as _, i (_.title)}
 				<Cards
 					img={_.img}
-					h1={_.title}
-					p={_.text}
+					h1={truncate(_.title,80)}
+					p={truncate(_.text,160)}
 					fL={_.link}
 					fR={_.date}
 					full={!home.savedLayout}
@@ -56,6 +68,7 @@
 							home.selectedTitles = [...home.selectedTitles, _.title];
 						} else {
 							home.selectedTitles = home.selectedTitles.filter((t: string) => t !== _.title);
+							if (home.selectedTitles.length === 0) home.selectMode = false;
 						}
 					}}
 				/>
@@ -92,41 +105,47 @@
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
-					onclick={() => togglePinSelectedItems('home')}
+					onclick={() => { haptic('light'); togglePinSelectedItems('home'); }}
 				>
 					<Pin class="size-4" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
-					onclick={() => {
-						confirmState.open = true;
-						confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
+				onclick={() => {
+					haptic('medium');
+					confirmState.open = true;
+					confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
 						confirmState.message = 'This will remove them from all spaces too';
 						confirmState.confirmText = 'Delete All';
 						confirmState.onConfirm = () => {
-							let titles = home.selectedTitles;
-							const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
-							const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-							for (const spc of localSpaces.current) {
-								const matching = spc.items.filter((i: any) => titles.includes(i.title));
-								if (matching.length > 0) {
-									spaceMappings.push({ spaceName: spc.name, items: matching });
+							try {
+								let titles = home.selectedTitles;
+								const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
+								const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+								for (const spc of localSpaces.current) {
+									const matching = spc.items.filter((i: any) => titles.includes(i.title));
+									if (matching.length > 0) {
+										spaceMappings.push({ spaceName: spc.name, items: matching });
+									}
 								}
-							}
-							let tempArr = localItems.current.filter(
-								(item: any) => !titles.includes(item.title)
-							);
-							localItems.current = tempArr;
-							localSpaces.current.forEach((spc: any) => {
-								spc.items = spc.items.filter(
+								let tempArr = localItems.current.filter(
 									(item: any) => !titles.includes(item.title)
 								);
-							});
+								localItems.current = tempArr;
+								localSpaces.current.forEach((spc: any) => {
+									spc.items = spc.items.filter(
+										(item: any) => !titles.includes(item.title)
+									);
+								});
+								const msg = titles.length + ' items Deleted';
+								setUndo(msg, deletedItems, spaceMappings);
+								toast.success(msg, { duration: 2000 });
+							} catch (err) {
+								console.error('Failed to delete items:', err);
+								toast.error('Failed to delete items', { duration: 2000 });
+							}
 							home.selectedTitles = [];
 							home.selectMode = false;
-							const msg = titles.length + ' items Deleted';
-							setUndo(msg, deletedItems, spaceMappings);
-							toast.success(msg, { duration: 2000 });
 						};
 					}}
 				>
@@ -135,6 +154,7 @@
 				<button
 					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
 					onclick={() => {
+						haptic('light');
 						home.selectedTitles = [];
 						home.selectMode = false;
 					}}
@@ -183,14 +203,17 @@
 {:else}
 	<!-- Back Button -->
 	<button
-		in:slide
+		in:slide|global={{delay:400}}
 		onclick={() => {
+			haptic('light');
 			history.back();
 		}}
-		class="btn bg-primary-950/70 fixed bottom-6 left-1/2 z-9 w-80 -translate-x-1/2 rounded-2xl backdrop-blur"
+		class="bg-surface-950/60 fixed bottom-0 left-1/2 z-9 w-[90vw] -translate-x-1/2 rounded-t-2xl backdrop-blur-xs"
 	>
-		<ArrowLeft />
-		Go Back
+		<span class="btn py-3">
+			<ArrowLeft />
+			Go Back
+		</span>
 	</button>
 {/if}
 

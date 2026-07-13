@@ -4,6 +4,7 @@
 	let { children } = $props();
 
 	import { AppBar, Avatar, FileUpload, Navigation } from '@skeletonlabs/skeleton-svelte';
+	import type { FileUploadApi } from '@skeletonlabs/skeleton-svelte';
 	import toast, { Toaster } from 'svelte-french-toast';
 	import BlobImg from '$lib/assets/blob-scene.svg';
 	import appIcon from '$lib/assets/launch-icon.webp';
@@ -13,7 +14,7 @@
 		ArrowLeft,
 		Bolt,
 		CircleDashed,
-		File,
+		File as FileIcon,
 		Home,
 		ImagePlus,
 		LayoutGrid,
@@ -42,7 +43,9 @@
 		Trash2,
 		ChevronLeft,
 		Pin,
-		PinOff
+		PinOff,
+		Share2,
+		Copy
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 import {
@@ -63,25 +66,39 @@ import {
 	truncate,
 	setUndo,
 	setUndoRemove,
-	spaceSelect
+	spaceSelect,
+	onboardingView,
+	haptic
 } from '../lib/shared.svelte';
+
+	const motionOk =
+		typeof window !== 'undefined' && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 	// State
 	let imageFile: any = $state();
+	let uploadApi: FileUploadApi | undefined = $state();
+	const fileLookup = new Map<string, File>();
 	let navbarExpanded = $state(false);
+	let isSubmitting = $state(false);
 	let touchStartY = $state(0);
 	onMount(() => {
-		if (page.route.id === '/') {
-			goto('/tabs/home');
-		} else if (page.route.id === '/tabs/home') {
-			home.pageTitle = 'Home';
-			goto('/tabs/home');
-		} else if (page.route.id === '/tabs/space') {
-			home.pageTitle = 'Space';
-			goto('/tabs/space');
+		try {
+			if (page.route.id === '/') {
+				goto('/tabs/home');
+			} else if (page.route.id === '/tabs/home') {
+				home.pageTitle = 'Home';
+				goto('/tabs/home');
+			} else if (page.route.id === '/tabs/space') {
+				home.pageTitle = 'Space';
+				goto('/tabs/space');
+			}
+		} catch (err) {
+			console.error('Navigation error:', err);
 		}
 	});
 	$effect(() => {
 		document.documentElement.setAttribute('data-theme', data_theme.current.value);
+		refreshGrainientColors();
 		if (page.route.id == '/tabs/space') {
 			spaceSelect.selectMode = false;
 			spaceSelect.selectedNames = [];
@@ -94,38 +111,60 @@ import {
 
 	$effect(() => {
 		if (shareTarget.current) {
-			let targetUrl = shareTarget.current.url;
-			if (!targetUrl && shareTarget.current.text) {
-				const match = shareTarget.current.text.match(/https?:\/\/[^\s]+/);
-				if (match) targetUrl = match[0];
-			}
-			if (targetUrl) {
-				if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
-					targetUrl = 'https://' + targetUrl;
+			try {
+				let targetUrl = shareTarget.current.url;
+				if (!targetUrl && shareTarget.current.text) {
+					const match = shareTarget.current.text.match(/https?:\/\/[^\s]+/);
+					if (match) targetUrl = match[0];
 				}
-				url = targetUrl;
-				handleSubmit();
+				if (targetUrl) {
+					if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+						targetUrl = 'https://' + targetUrl;
+					}
+					url = targetUrl;
+					handleSubmit();
+				}
+				if (shareTarget.current.title && !shareTarget.current.title.startsWith('http')) {
+					sharedItem.title = shareTarget.current.title;
+				}
+				navbarExpanded = true;
+			} catch (err) {
+				console.error('Share target error:', err);
 			}
-			if (shareTarget.current.title && !shareTarget.current.title.startsWith('http')) {
-				sharedItem.title = shareTarget.current.title;
-			}
-			navbarExpanded = true;
 			shareTarget.current = null;
 		}
 	});
 
 	function generatePreview(event: any) {
-		const reader = new FileReader();
-		reader.onload = (event) => {
-			const image = event.target?.result;
+		try {
+			const files = event.acceptedFiles;
+			if (!files?.length) return;
+			for (const file of files) {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					const image = e.target?.result as string;
+					if (image && !sharedItem.images.includes(image)) {
+						sharedItem.images = [...sharedItem.images, image];
+						fileLookup.set(image, file);
+					}
+				};
+				reader.readAsDataURL(file);
+			}
+			if (files[0]) sharedItem.img = '';
+		} catch (err) {
+			console.error('Failed to generate preview:', err);
+		}
+	}
 
-			sharedItem.img = image;
-			console.log(image);
-
-			// set the image as the src of an image element
-		};
-		reader.readAsDataURL(event.acceptedFiles[0]);
-		// console.log(reader)
+	function removeImage(index: number) {
+		const image = sharedItem.images[index];
+		const file = fileLookup.get(image);
+		if (file) {
+			uploadApi?.deleteFile(file);
+			fileLookup.delete(image);
+		}
+		sharedItem.images = sharedItem.images.filter((_: any, i: number) => i !== index);
+		if (sharedItem.images.length === 0) sharedItem.img = noImageUrl;
 	}
 
 	// OpenGraph imports and functions
@@ -143,7 +182,8 @@ import {
 		debounceTimer = setTimeout(() => handleSubmit(), 400);
 	}
 
-	async function handleSubmit() {
+	async function handleSubmit(e?: Event) {
+		e?.preventDefault();
 		if (!url) {
 			error = 'Please enter a URL';
 			return;
@@ -175,30 +215,75 @@ import {
 	// Image to Base64 imports and Functions
 	import { browser } from '$app/environment';
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
+	import Grainient from '$lib/components/Grainient.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+
+	const themeColors: Record<string, { p: string; s: string; t: string }> = {
+		mona:    { p: '#824fe1', s: '#2fa44f', t: '#6ad6d0' },
+		nosh:    { p: '#dc0024', s: '#f5d2d2', t: '#3c5748' },
+		vox:     { p: '#fbb48a', s: '#d0f96f', t: '#c8adff' },
+		modern:  { p: '#eb4999', s: '#00b7d6', t: '#21b7a6' },
+		vintage: { p: '#ea861d', s: '#98cea5', t: '#00b7d6' },
+		mint:    { p: '#66e985', s: '#7262f4', t: '#5d4f5f' },
+		crimson: { p: '#d21d3d', s: '#4785ae', t: '#bfb6b5' },
+		wintry:  { p: '#3a82f7', s: '#01a5ea', t: '#8281fd' },
+		pine:    { p: '#a0814d', s: '#57123c', t: '#878678' },
+		none:    { p: '#000000', s: '#808080', t: '#ffffff' },
+	};
+	const defaultColors = { c1: '#824fe1', c2: '#2fa44f', c3: '#6ad6d0' };
+	let grainientColors = $state(defaultColors);
+	function refreshGrainientColors() {
+		const theme = data_theme.current.value;
+		const colors = themeColors[theme];
+		if (colors) {
+			grainientColors.c1 = colors.p;
+			grainientColors.c2 = colors.s;
+			grainientColors.c3 = colors.t;
+		}
+	}
 
 	//Chips
 	let chipsSelect = $state(false);
 	let chipName = $state('');
-	function addItemToSpace(item: any) {
-		localSpaces.current.forEach((spc: any) => {
-			if (spc.name === chipName) {
-				const exists = spc.items.some((i: any) => i.title === item.title);
-				if (!exists) spc.items.push(item);
-			}
-		});
+
+	function normalizeUrl(u: string): string {
+		return u.trim().toLowerCase().replace(/\/+$/, '');
 	}
 
-	//DropDown
-	let dropMenu = $state(false);
-	let spaceMenu = $state(false);
+	function isDuplicateItem(item: any, urlToCheck: string, titleToCheck: string): boolean {
+		if (urlToCheck && item.url) {
+			if (normalizeUrl(item.url) === normalizeUrl(urlToCheck)) return true;
+		}
+		if (titleToCheck && item.title) {
+			if (item.title.trim().toLowerCase() === titleToCheck.trim().toLowerCase()) return true;
+		}
+		return false;
+	}
+
+	function addItemToSpace(item: any) {
+		try {
+			localSpaces.current.forEach((spc: any) => {
+				if (spc.name === chipName) {
+					const exists = spc.items.some((i: any) => i.title === item.title);
+					if (!exists) spc.items.push(item);
+				}
+			});
+		} catch (err) {
+			console.error('Failed to add item to space:', err);
+		}
+	}
+
 	function closeExpanded() {
+		isSubmitting = false;
 		navbarExpanded = false;
 		space.clr = 'purple';
 		space.name = space.desc = '';
 		chipName = '';
-		sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = sharedItem.pinned = url = '';
+		sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
+		sharedItem.pinned = false;
+		sharedItem.images = [];
+		url = '';
 	}
 	function handleTouchStart(e: TouchEvent) {
 		touchStartY = e.touches[0].clientY;
@@ -210,11 +295,16 @@ import {
 	}
 
 	function removeFromSheetSpace(spaceObj: any) {
-		const deletedItem = sheetState.data;
-		spaceObj.items = spaceObj.items.filter((item: any) => item.title !== sheetState.data.title);
-		spaceview.viewItems = spaceview.viewItems.filter((item: any) => item.title !== sheetState.data.title);
-		setUndoRemove(truncate(sheetState.data.title) + ' removed', [deletedItem], spaceObj.name);
-		toast.success(truncate(sheetState.data.title) + ' removed', { duration: 2000 });
+		try {
+			const deletedItem = sheetState.data;
+			spaceObj.items = spaceObj.items.filter((item: any) => item.title !== sheetState.data.title);
+			spaceview.viewItems = spaceview.viewItems.filter((item: any) => item.title !== sheetState.data.title);
+			setUndoRemove(truncate(sheetState.data.title) + ' removed', [deletedItem], spaceObj.name);
+			toast.success(truncate(sheetState.data.title) + ' removed', { duration: 2000 });
+		} catch (err) {
+			console.error('Failed to remove from space:', err);
+			toast.error('Failed to remove item', { duration: 2000 });
+		}
 		sheetState.open = false;
 		sheetState.spacePicker = false;
 	}
@@ -222,64 +312,83 @@ import {
 	function confirmRemoveFromSheetSpace(spaceObj: any) {
 		confirmState.open = true;
 		confirmState.title = 'Remove from ' + spaceObj.name + '?';
-		confirmState.message = sheetState.data.title;
+		confirmState.message = truncate(sheetState.data.title, 80);
 		confirmState.confirmText = 'Remove';
 		confirmState.onConfirm = () => removeFromSheetSpace(spaceObj);
 	}
 
 	function deleteSheetItem() {
-		const deletedItem = localItems.current.find((i: any) => i.title === sheetState.data.title);
-		const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-		for (const spc of localSpaces.current) {
-			if (spc.items.some((i: any) => i.title === sheetState.data.title)) {
-				spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
+		haptic('medium');
+		try {
+			const deletedItem = localItems.current.find((i: any) => i.title === sheetState.data.title);
+			const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+			for (const spc of localSpaces.current) {
+				if (spc.items.some((i: any) => i.title === sheetState.data.title)) {
+					spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
+				}
 			}
+			localItems.current = localItems.current.filter((item: any) => item.title !== sheetState.data.title);
+			localSpaces.current.forEach((spc: any) => {
+				spc.items = spc.items.filter((item: any) => item.title !== sheetState.data.title);
+			});
+			setUndo(truncate(sheetState.data.title) + ' Deleted', [deletedItem], spaceMappings);
+			toast(truncate(sheetState.data.title) + ' Deleted', { icon: '🗑️', duration: 2000 });
+		} catch (err) {
+			console.error('Failed to delete item:', err);
+			toast.error('Failed to delete item', { duration: 2000 });
 		}
-		localItems.current = localItems.current.filter((item: any) => item.title !== sheetState.data.title);
-		localSpaces.current.forEach((spc: any) => {
-			spc.items = spc.items.filter((item: any) => item.title !== sheetState.data.title);
-		});
-		setUndo(truncate(sheetState.data.title) + ' Deleted', [deletedItem], spaceMappings);
-		toast(truncate(sheetState.data.title) + ' Deleted', { icon: '🗑️', duration: 2000 });
 		sheetState.open = false;
 		sheetState.spacePicker = false;
+		if (page.route.id === '/card') history.back();
 	}
 
 	function confirmDeleteSheetItem() {
 		confirmState.open = true;
 		confirmState.title = 'Delete Item?';
-		confirmState.message = sheetState.data.title;
+		confirmState.message = truncate(sheetState.data.title,80);
 		confirmState.confirmText = 'Delete';
 		confirmState.onConfirm = deleteSheetItem;
 	}
 
 	function addSheetItemToSpace(spaceObj: any) {
-		const exists = spaceObj.items.some((i: any) => i.title === sheetState.data.title);
-		if (exists) {
-			toast.error('Already in ' + spaceObj.name, { duration: 1500 });
-		} else {
-			spaceObj.items.push(sheetState.data);
-			toast.success('Added to ' + spaceObj.name, { duration: 1500 });
+		try {
+			const exists = spaceObj.items.some((i: any) => i.title === sheetState.data.title);
+			if (exists) {
+				toast.error('Already in ' + spaceObj.name, { duration: 1500 });
+			} else {
+				spaceObj.items.push(sheetState.data);
+				toast.success('Added to ' + spaceObj.name, { duration: 1500 });
+			}
+		} catch (err) {
+			console.error('Failed to add to space:', err);
+			toast.error('Failed to add to space', { duration: 2000 });
 		}
 		sheetState.open = false;
 		sheetState.spacePicker = false;
 	}
 
 	function toggleSheetPin() {
+		haptic('light');
 		if (!sheetState.data) return;
-		sheetState.data.pinned = !sheetState.data.pinned;
-		const li = localItems.current.find((i: any) => i.title === sheetState.data.title);
-		if (li) li.pinned = sheetState.data.pinned;
-		localSpaces.current.forEach((spc: any) => {
-			const si = spc.items.find((i: any) => i.title === sheetState.data.title);
-			if (si) si.pinned = sheetState.data.pinned;
-		});
-		toast.success(sheetState.data.pinned ? 'Pinned to top' : 'Unpinned', { duration: 1500 });
+		try {
+			sheetState.data.pinned = !sheetState.data.pinned;
+			const li = localItems.current.find((i: any) => i.title === sheetState.data.title);
+			if (li) li.pinned = sheetState.data.pinned;
+			localSpaces.current.forEach((spc: any) => {
+				const si = spc.items.find((i: any) => i.title === sheetState.data.title);
+				if (si) si.pinned = sheetState.data.pinned;
+			});
+			toast.success(sheetState.data.pinned ? 'Pinned to top' : 'Unpinned', { duration: 1500 });
+		} catch (err) {
+			console.error('Failed to toggle pin:', err);
+			toast.error('Failed to update pin', { duration: 2000 });
+		}
 		sheetState.open = false;
 		sheetState.spacePicker = false;
 	}
 
 	function toggleSheetPinInSpace() {
+		haptic('light');
 		if (!sheetState.data) return;
 		const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
 		if (!space) return;
@@ -291,14 +400,44 @@ import {
 		sheetState.open = false;
 		sheetState.spacePicker = false;
 	}
+
+	function shareItem(url: string, title: string) {
+		if (navigator.share) {
+			navigator.share({ title, url }).catch(() => {});
+		} else {
+			toast.error('Sharing is not supported on this browser', { duration: 2000 });
+		}
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
+
+	function copyItemUrl(url: string) {
+		navigator.clipboard.writeText(url).then(() => {
+			toast.success('URL copied to clipboard', { duration: 2000 });
+		}).catch(() => {
+			toast.error('Failed to copy URL', { duration: 2000 });
+		});
+		sheetState.open = false;
+		sheetState.spacePicker = false;
+	}
 </script>
 
-<div class="flex justify-center w-screen">
-	<div class="grid h-screen w-full lg:max-w-[480px] grid-rows-[auto_1fr_auto] select-none">
+<div class="relative flex justify-center w-screen">
+	<div class="pointer-events-none fixed inset-0 z-0 h-svh w-full opacity-60">
+		<Grainient
+			color1={grainientColors.c1}
+			color2={grainientColors.c2}
+			color3={grainientColors.c3}
+			grainAmount={0.08}
+			contrast={1.1}
+			saturation={1}
+		/>
+	</div>
+	<div class="relative z-1 grid h-svh w-full lg:max-w-[1svh] grid-rows-[auto_1fr_auto] select-none">
 	<!-- Header -->
-	<header in:slide class="transform-gpu sticky top-0 z-10 backdrop-blur-xl">
+	<header in:slide class="transform-gpu sticky top-0 z-11">
 		<!-- <AppBarC title={value} {homeLayout}></AppBarC> -->
-		{#if !page.error && !first.current}
+		{#if !page.error && (!first.current || localItems.current.length > 0 || localSpaces.current.length > 0)}
 			{@render Appbar(home.pageTitle, null)}
 		{/if}
 	</header>
@@ -313,43 +452,115 @@ import {
 			</div>
 		{:else}
 			{@render children()}
-			{#if first.current && localItems.current.length < 1 && localSpaces.current.length < 1}
-				<!-- svelte-ignore a11y_missing_attribute -->
-				<div class="{first.current ? 'visible' : 'hidden'} ">
-					<img
+			{#if (first.current && localItems.current.length < 1 && localSpaces.current.length < 1) || onboardingView.active}
+				<!-- svelte-ignore a11y_click_events_have_key_events -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-label="Welcome to GloveBox"
+					in:fade={{ duration: motionOk ? 300 : 100 }}
+					out:fade={{ duration: motionOk ? 200 : 80 }}
+					class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface-950"
+				>
+					<!-- <img
 						src={BlobImg}
-						in:blur
-						out:blur={{ delay: 400 }}
-						class="fixed inset-1 z-50 flex h-fit w-full justify-center blur-xs"
-					/>
-					<div>
-						<span
-							class="absolute top-0 right-0 bottom-0 left-0 z-51 flex flex-col items-center justify-center gap-2"
+						class="fixed inset-0 h-full w-full object-cover  "
+						alt=""
+					/> -->
+					<div
+						class="relative z-10 mx-auto flex w-full max-w-sm flex-col items-center px-6"
+					>
+						<img
+							src={appIcon}
+							in:fly={{ y: motionOk ? 12 : 0, duration: motionOk ? 500 : 100, delay: 0 }}
+							alt="GloveBox"
+							class="mb-5 size-[20%] bg-primary-500 rounded-3xl"
+						/>
+						<h1
+							in:fly={{ y: motionOk ? 12 : 0, duration: motionOk ? 500 : 100, delay: motionOk ? 60 : 0 }}
+							class="h1 mb-1 text-center font-bold tracking-tight"
 						>
-							<img
-								src={appIcon}
-								transition:blur={{ delay: 200 }}
-								alt="GloveBox"
-								class="shadow-primary-200/50 -mb-10"
-							/>
-							<h2 transition:slide={{ delay: 300 }} class="h3">Welcome to</h2>
-							<h2 transition:slide={{ delay: 300 }} class="h2">GloveBox</h2>
-							<button
-								transition:blur={{ delay: 400 }}
-								type="button"
-								aria-label="title"
-								class="btn preset-filled mt-5 w-60 rounded-full py-2 text-lg"
-								onclick={() => {
-									first.current = !first.current;
-								}}>Continue</button
+							GloveBox
+						</h1>
+						<p
+							in:fly={{ y: motionOk ? 8 : 0, duration: motionOk ? 400 : 100, delay: motionOk ? 120 : 0 }}
+							class="mb-10 text-center text-sm text-white/50"
+						>
+							URL organizer &amp; stashing
+						</p>
+						<div class="flex w-full flex-col gap-3">
+							<div
+								in:fly={{ y: motionOk ? 16 : 0, duration: motionOk ? 400 : 100, delay: motionOk ? 200 : 0 }}
+								class="group flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/10 bg-primary-500/15 px-4 py-2 xs:py-4 transition-colors duration-200 hover:border-white/20 hover:bg-primary-500/15"
 							>
-							<p
-								transition:slide={{ delay: 100 }}
-								class="p absolute bottom-10 flex text-lg font-bold tracking-wider"
+								<div
+									class="flex size-9 shrink-0 items-center justify-center rounded-lg"
+								>
+									<Link class="size-6 text-primary-400" />
+								</div>
+								<div>
+									<h3 class="text-sm font-semibold leading-tight">Save &amp; Stash</h3>
+									<p class="text-xs leading-snug text-white/45">
+										Auto-fetch titles, images &amp; descriptions from any URL
+									</p>
+								</div>
+							</div>
+							<div
+								in:fly={{ y: motionOk ? 16 : 0, duration: motionOk ? 400 : 100, delay: motionOk ? 280 : 0 }}
+								class="group flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/10 bg-secondary-500/15 px-4 py-2 xs:py-4 transition-colors duration-200 hover:border-white/20 hover:bg-secondary-500/35"
 							>
-								URL organizer & stashing
-							</p>
-						</span>
+								<div
+									class="flex size-9 shrink-0 items-center justify-center rounded-lg "
+								>
+									<LayoutGrid class="size-6 text-secondary-400" />
+								</div>
+								<div>
+									<h3 class="text-sm font-semibold leading-tight">Spaces</h3>
+									<p class="text-xs leading-snug text-white/45">
+										Organize links & items into themed Collections & Spaces.
+									</p>
+								</div>
+							</div>
+							<div
+								in:fly={{ y: motionOk ? 16 : 0, duration: motionOk ? 400 : 100, delay: motionOk ? 360 : 0 }}
+								class="group flex cursor-pointer items-center gap-3.5 rounded-2xl border border-white/10 bg-tertiary-500/15 px-4 py-2 xs:py-4 transition-colors duration-200 hover:border-white/20 hover:bg-tertiary-500/35"
+							>
+								<div
+									class="flex size-9 shrink-0 items-center justify-center rounded-lg "
+								>
+									<Pin class="size-6 text-tertiary-400" />
+								</div>
+								<div>
+									<h3 class="text-sm font-semibold leading-tight">Pin &amp; Manage</h3>
+									<p class="text-xs leading-snug text-white/45">
+										Pin favorites, add custom images. Make the most of it
+									</p>
+								</div>
+							</div>
+						</div>
+						<button
+							in:fly={{ y: motionOk ? 8 : 0, duration: motionOk ? 400 : 100, delay: motionOk ? 460 : 0 }}
+							type="button"
+							onclick={() => {
+								first.current = false;
+								onboardingView.active = false;
+							}}
+							class="mt-8 w-full cursor-pointer rounded-xl border border-primary-500/30 bg-primary-500/10 px-6 py-3 text-sm font-bold text-primary-400 transition-colors duration-200 hover:border-primary-500/50 hover:bg-primary-500/15"
+						>
+							Get Started
+						</button>
+						<button
+							in:fade={{ duration: motionOk ? 300 : 100, delay: motionOk ? 550 : 0 }}
+							type="button"
+							onclick={() => {
+								first.current = false;
+								onboardingView.active = false;
+							}}
+							class="mt-4 cursor-pointer text-xs tracking-wider text-white/30 uppercase transition-colors duration-200 hover:text-white/60"
+						>
+							Skip
+						</button>
 					</div>
 				</div>
 			{/if}
@@ -366,44 +577,29 @@ import {
 	{#if undoState.pending}
 		<div
 			in:fly={{ y: 40, duration: 200 }}
-			class="transform-gpu fixed bottom-26 left-1/2 z-50 flex w-full max-w-sm -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
+			class="transform-gpu fixed bottom-26 left-1/2 z-50 flex w-full max-w-[90%] -translate-x-1/2 items-center justify-between gap-4 rounded-2xl bg-black/60 px-4 py-3 mb-2 shadow-2xl shadow-primary-500/10 backdrop-blur-xl border border-primary-500/20 text-sm"
 		>
 			<span class="font-semibold text-white drop-shadow-sm">{undoState.message}</span>
 			<button
-				class="rounded-lg bg-primary-500 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-primary-500/30 transition-all duration-200 hover:bg-primary-400 hover:shadow-primary-400/40 active:scale-95"
-				onclick={performUndo}
+				class="rounded-lg bg-primary-300 px-5 py-2 text-sm font-black text-surface-900 shadow-lg shadow-primary-500/30 transition-all duration-200 hover:bg-primary-400 hover:shadow-primary-400/40 active:scale-95"
+				onclick={() => { haptic('medium'); performUndo(); }}
 			>
 				Undo
 			</button>
 		</div>
 	{/if}
-
-	{#if dropMenu || spaceMenu}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div class="transform-gpu fixed inset-0 z-40" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
-		<div
-			transition:fly={{ y: 100, duration: 200 }}
-			class="transform-gpu fixed bottom-0 z-50 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] rounded-t-4xl bg-primary-900/70 px-6 pb-10 pt-4 shadow-2xl backdrop-blur-xl border-t border-white/10"
-		>
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div class="mx-auto mb-4 h-1.5 w-12 rounded-full bg-white/70" onclick={() => { dropMenu = false; spaceMenu = false; }}></div>
-			{@render CardDropDown()}
-		</div>
-	{/if}
 	<!-- Morphing Navbar -->
-	{#if (page.route.id === '/tabs/home' || page.route.id === '/tabs/space') && !first.current && !(page.route.id === '/tabs/home' && home.selectMode)}
+	{#if (page.route.id === '/tabs/home' || page.route.id === '/tabs/space') && (!first.current || localItems.current.length > 0 || localSpaces.current.length > 0) && !(page.route.id === '/tabs/home' && home.selectMode)}
 		{#if navbarExpanded}
-			<div
-				transition:blur={{ duration: 200 }}
-				class="transform-gpu fixed inset-0 z-10 bg-black/40 backdrop-blur-sm"
-				onclick={closeExpanded}
-			></div>
+		<div
+			transition:blur={{ duration: 200 }}
+			class="transform-gpu fixed inset-0 z-11 bg-black/40 backdrop-blur-sm"
+			onclick={() => { haptic('light'); closeExpanded(); }}
+		></div>
 		{/if}
-		<div transition:slide|global class="transform-gpu fixed bottom-5 z-11 left-1/2 -translate-x-1/2 w-full lg:max-w-[480px] px-4" class:opacity-0={page.route.id === '/tabs/space' && spaceSelect.selectMode} class:pointer-events-none={page.route.id === '/tabs/space' && spaceSelect.selectMode}>
+		<div transition:slide|global class="transform-gpu fixed transition-all duration-700 {navbarExpanded ? 'bottom-0' : 'bottom-5 px-4'} z-11 w-full " class:opacity-0={page.route.id === '/tabs/space' && spaceSelect.selectMode} class:pointer-events-none={page.route.id === '/tabs/space' && spaceSelect.selectMode}>
 			<div
-				class="rounded-3xl border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
+				class="{navbarExpanded ? 'rounded-t-2xl' : 'rounded-[42px]'} border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
 			>
 				<div class="h-20 relative overflow-hidden">
 					<div
@@ -420,31 +616,32 @@ import {
 							}}
 						>
 							<Navigation.Tile
-								active=" bg-primary-800/50 text-primary-200 "
-								rounded="rounded-2xl rounded-r-lg"
+								active=" bg-primary-500/50 text-primary-200 transition-all duration-200"
+								rounded="rounded-full rounded-r-none"
 								href="/tabs/home/"
 								id="Home"
 								label="Home"><Home /></Navigation.Tile
 							>
 
-							<div class="px-1">
+							<div class="">
 								<button
 									type="button"
-									class="btn-icon bg-primary-400 z-20 h-12 w-10 rounded-lg px-6 "
-									onclick={() => {
-										url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
-										sharedItem.pinned = false;
-										chipName = '';
-										navbarExpanded = true;
-									}}
+									class="btn-icon bg-primary-400 z-20 h-14 flex rounded-none px-10 "
+								onclick={() => {
+									haptic('light');
+									url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
+									sharedItem.pinned = false;
+									chipName = '';
+									navbarExpanded = true;
+								}}
 								>
 									<Plus class="text-black" />
 								</button>
 							</div>
 
 							<Navigation.Tile
-								active=" bg-primary-800/50 text-primary-200 "
-								rounded="rounded-2xl rounded-l-lg"
+								active=" bg-primary-500/50 text-primary-200 transition-all duration-200"
+								rounded="rounded-full rounded-l-none"
 								href="/tabs/space/"
 								id="Space"
 								label="Space"><CircleDashed /></Navigation.Tile
@@ -452,7 +649,7 @@ import {
 						</Navigation.Bar>
 					</div>
 					<div
-						class="absolute inset-0 flex items-center gap-3 px-6 transition-all duration-300 ease-out"
+						class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out"
 						class:opacity-0={!navbarExpanded}
 						class:opacity-100={navbarExpanded}
 						style={!navbarExpanded ? 'pointer-events: none;' : ''}
@@ -468,7 +665,7 @@ import {
 					</div>
 				</div>
 				{#if navbarExpanded}
-					<div transition:slide={{ duration: 400 }} ontouchstart={handleTouchStart} ontouchend={handleTouchEnd} class="max-h-[calc(100dvh-7rem)] overflow-y-auto">
+					<div transition:slide={{ duration: 500 }} ontouchstart={handleTouchStart} ontouchend={handleTouchEnd} class="max-h-[calc(100dvh-7rem)] overflow-y-auto">
 						{@render PopUpCard()}
 					</div>
 				{/if}
@@ -489,7 +686,7 @@ import {
 		<div
 			transition:fade={{ duration: 150 }}
 			onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
-			class="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+			class="fixed inset-0 z-200 flex items-end justify-center bg-black/60 backdrop-blur-sm"
 		>
 			<div
 				transition:fly={{ duration: 250, y: 200, opacity: 0 }}
@@ -511,24 +708,40 @@ import {
 								<p class="truncate text-sm font-bold text-white/80">{sheetState.data.title}</p>
 							</div>
 							<div class="pb-2">
-								{#if sheetState.data.url !== ''}
-									<a
-										target="_blank"
-										href={sheetState.data.url}
-										onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
-										class="flex items-center justify-between rounded-xl px-4 py-3.5 text-yellow-300 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
-									>
-										<span class="font-bold">Open Link</span>
-										<Link class="size-5 shrink-0" />
-									</a>
-									<hr class="mx-3 border-white/5" />
-								{/if}
+						{#if sheetState.data.url !== ''}
+								<a
+									target="_blank"
+									href={sheetState.data.url}
+									onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
+									class="flex items-center justify-between rounded-xl px-4 py-3.5 text-yellow-200 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+								>
+									<span class="font-bold">Open Link</span>
+									<Link class="size-5 shrink-0" />
+								</a>
+								<hr class="mx-3 border-white/5" />
+							<button
+								onclick={() => { haptic('light'); shareItem(sheetState.data.url, sheetState.data.title) }}
+									class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-primary-100 hover:bg-green-500/10 active:scale-[0.98] transition-all duration-150"
+								>
+									<span class="font-bold">Share</span>
+									<Share2 class="size-5 shrink-0" />
+								</button>
+								<hr class="mx-3 border-white/5" />
+							<button
+								onclick={() => { haptic('light'); copyItemUrl(sheetState.data.url) }}
+									class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-secondary-200 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
+								>
+									<span class="font-bold">Copy URL</span>
+									<Copy class="size-5 shrink-0" />
+								</button>
+								<hr class="mx-3 border-white/5" />
+							{/if}
 								{#each localSpaces.current as spaceObj}
 									{#each spaceObj.items as obj}
 										{#if obj.title === sheetState.data.title}
 											<button
 												onclick={() => confirmRemoveFromSheetSpace(spaceObj)}
-												class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-{spaceObj.clr}-400 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
+												class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-{spaceObj.clr}-200 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
 											>
 												<span class="truncate font-bold">
 													Remove from <span class="font-bold">{spaceObj.name}</span>
@@ -542,7 +755,7 @@ import {
 								{#if page.route.id === '/tabs/space/spaceview'}
 									<button
 										onclick={toggleSheetPinInSpace}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-blue-400 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-tertiary-300 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
 									>
 										<span class="font-bold">{sheetState.data.pinnedInSpace ? 'Unpin from ' : 'Pin to '}{spaceview.pageTitle}</span>
 										{#if sheetState.data.pinnedInSpace}
@@ -554,8 +767,8 @@ import {
 									<hr class="mx-3 border-white/5" />
 								{/if}
 								{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
-									<button
-										onclick={() => (sheetState.spacePicker = true)}
+							<button
+								onclick={() => { haptic('light'); sheetState.spacePicker = true }}
 										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
 									>
 										<span class="font-bold">Add to Space</span>
@@ -564,7 +777,7 @@ import {
 									<hr class="mx-3 border-white/5" />
 									<button
 										onclick={toggleSheetPin}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-blue-400 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-tertiary-300 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
 									>
 										<span class="font-bold">{sheetState.data.pinned ? 'Unpin' : 'Pin to Top'}</span>
 										{#if sheetState.data.pinned}
@@ -574,9 +787,9 @@ import {
 										{/if}
 									</button>
 									<hr class="mx-3 border-white/5" />
-									<button
-										onclick={confirmDeleteSheetItem}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-red-400 hover:bg-red-500/10 active:scale-[0.98] transition-all duration-150"
+							<button
+								onclick={() => { haptic('medium'); confirmDeleteSheetItem() }}
+										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-red-300 hover:bg-red-500/10 active:scale-[0.98] transition-all duration-150"
 									>
 										<span class="font-bold">Delete</span>
 										<Trash class="size-5 shrink-0" />
@@ -593,8 +806,8 @@ import {
 					>
 						<div class="max-h-[65vh] overflow-y-auto">
 							<div class="flex items-center gap-2 px-4 pb-2">
-								<button
-									onclick={() => (sheetState.spacePicker = false)}
+							<button
+								onclick={() => { haptic('light'); sheetState.spacePicker = false }}
 									class="flex items-center gap-2 text-sm font-bold text-white/60 hover:text-white transition-colors duration-150"
 								>
 									<ChevronLeft class="size-5" />
@@ -603,8 +816,8 @@ import {
 							</div>
 							<div class="px-1 pb-4">
 								{#each [...localSpaces.current].reverse() as item}
-									<button
-										onclick={() => addSheetItemToSpace(item)}
+							<button
+								onclick={() => { haptic('medium'); addSheetItemToSpace(item) }}
 										class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
 									>
 										<span class="flex items-center gap-3 truncate">
@@ -620,8 +833,8 @@ import {
 				</div>
 
 				<div class="px-4 pb-4 pt-1">
-					<button
-						onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
+				<button
+					onclick={() => { haptic('light'); sheetState.open = false; sheetState.spacePicker = false; }}
 						class="w-full rounded-xl bg-white/10 py-3.5 text-center font-bold text-white/80 hover:bg-white/15 active:scale-[0.98] transition-all duration-150"
 					>
 						Cancel
@@ -635,51 +848,54 @@ import {
 
 {#snippet Appbar(title: string, children: any)}
 	<div transition:slide|global class="transform-gpu">
-		<AppBar classes="dark:bg-primary-950/80 gpu-layer">
+		<AppBar classes="bg-surface-950/60 rounded-b-[35px] gpu-layer backdrop-blur-xl">
 			{#snippet headline()}
-				{#if page.route.id === '/settings'}
+				<div class="dark:bg-primary-500/40 rounded-full py-2">
+					{#if page.route.id === '/settings'}
 					<center>
 						<h1 in:fade class="h1 font-bold">Settings</h1>
 					</center>
-				{:else if page.route.id === '/tabs/home/saved'}
+					{:else if page.route.id === '/tabs/home/saved'}
 					<center>
 						<h1 in:fade class="h1 font-bold">Saved</h1>
 					</center>
-				{:else if page.route.id === '/tabs/home'}
+					{:else if page.route.id === '/tabs/home'}
 					<center>
 						<h1 in:fade class="h1 font-bold">Home</h1>
 					</center>
-				{:else if page.route.id === '/tabs/space'}
+					{:else if page.route.id === '/tabs/space'}
 					<center>
 						<h1 in:fade class="h1 font-bold">Space</h1>
 					</center>
-				{:else if page.route.id === '/info'}
+					{:else if page.route.id === '/info'}
 					<center>
 						<h1 in:fade class="h1 font-bold">Glove Box</h1>
 					</center>
-				{:else if page.route.id === '/card'}
-					<center>
-						<h1 in:fade class="h1 w-70 truncate font-bold">{cardPage.link}</h1>
-					</center>
+			{:else if page.route.id === '/card'}
+				<center>
+					<h1 in:fade class="h1 w-70 truncate font-bold">{cardPage.title || cardPage.link}</h1>
+				</center>
 				{:else if page.route.id === '/tabs/space/spaceview'}
-					<center>
-						<h1 in:fade class="h1 w-70 truncate font-bold text-{spaceview.clr}-400">
-							{spaceview.pageTitle}
-						</h1>
-					</center>
+				<center>
+					<h1 in:fade class="h1 w-70 truncate font-bold text-{spaceview.clr}-400">
+						{spaceview.pageTitle}
+					</h1>
+				</center>
 				{/if}
+			</div>
 			{/snippet}
 
 			{#snippet lead()}
 				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/info' || page.route.id === '/tabs/space/spaceview'}
-					<ArrowLeft
-						onclick={() => {
-							history.back();
-						}}
-						class="size-7"
-					/>
+			<ArrowLeft
+					onclick={() => {
+						haptic('light');
+						history.back();
+					}}
+					class="size-7"
+				/>
 				{:else if page.route.id === '/card'}
-					{#if !dropMenu || spaceMenu}
+					{#if !sheetState.open}
 						<ArrowLeft
 							onclick={() => {
 								history.back();
@@ -706,26 +922,28 @@ import {
 					<SquareStack
 						class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
 						onclick={() => {
+							haptic('light');
 							home.selectMode = !home.selectMode;
 							if (!home.selectMode) home.selectedTitles = [];
 						}}
 					/>
 				{:else if page.route.id === '/tabs/space'}
-				{#if !spaceSelect.expandAll}
-					<ChevronDown
-						onclick={() => { spaceSelect.expandAll = true; }}
-						class="size-7"
-					/>
-				{:else}
-					<ChevronUp
-						onclick={() => { spaceSelect.expandAll = false; }}
-						class="size-7"
-					/>
+			{#if !spaceSelect.expandAll}
+				<ChevronDown
+					onclick={() => { haptic('light'); spaceSelect.expandAll = true; }}
+					class="size-7"
+				/>
+			{:else}
+				<ChevronUp
+					onclick={() => { haptic('light'); spaceSelect.expandAll = false; }}
+					class="size-7"
+				/>
 				{/if}
 					{#if localSpaces.current.length > 0}
 						<SquareStack
 							class="size-7 {spaceSelect.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px rgba(168,85,247,0.6)]' : ''}"
 							onclick={() => {
+								haptic('light');
 								spaceSelect.selectMode = !spaceSelect.selectMode;
 								if (!spaceSelect.selectMode) spaceSelect.selectedNames = [];
 							}}
@@ -745,98 +963,93 @@ import {
 						/>
 					</a>
 				{:else if page.route.id === '/card'}
-					<button>
-						{#if dropMenu || spaceMenu}
-							<div in:fly>
-								<X
-									class="size-7"
-									onclick={() => {
-										dropMenu = false;
-										spaceMenu = false;
-									}}
-								/>
-							</div>
-						{:else}
-							<div in:fly>
-								<MoreVertical
-									class="size-7"
-									onclick={() => {
-										dropMenu = true;
-									}}
-								/>
-							</div>
-						{/if}
-					</button>
+					<MoreVertical
+						class="size-7"
+						onclick={() => {
+							sheetState.open = true;
+							sheetState.data = cardPage;
+							sheetState.spacePicker = false;
+						}}
+					/>
 				{/if}
-				{#if page.route.id === '/tabs/home/saved'}
-					<SquareStack
-						class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
-						onclick={() => {
-							home.selectMode = !home.selectMode;
-							if (!home.selectMode) home.selectedTitles = [];
-						}}
+			{#if page.route.id === '/tabs/home/saved'}
+				<SquareStack
+					class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
+					onclick={() => {
+						haptic('light');
+						home.selectMode = !home.selectMode;
+						if (!home.selectMode) home.selectedTitles = [];
+					}}
 					/>
-					{#if home.savedLayout}
-						<StretchHorizontal
-							onclick={() => {
-								home.savedLayout = !home.savedLayout;
-							}}
-							class="size-7"
-						/>
-					{:else}
-						<LayoutGrid
-							onclick={() => {
-								home.savedLayout = !home.savedLayout;
-							}}
-							class="size-7"
-						/>
+				{#if home.savedLayout}
+					<StretchHorizontal
+						onclick={() => {
+							haptic('light');
+							home.savedLayout = !home.savedLayout;
+						}}
+						class="size-7"
+					/>
+				{:else}
+					<LayoutGrid
+						onclick={() => {
+							haptic('light');
+							home.savedLayout = !home.savedLayout;
+						}}
+						class="size-7"
+					/>
 					{/if}
-				{:else if page.route.id === '/tabs/space/spaceview'}
-					<SquareStack
-						class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
-						onclick={() => {
-							home.selectMode = !home.selectMode;
-							if (!home.selectMode) home.selectedTitles = [];
-						}}
+			{:else if page.route.id === '/tabs/space/spaceview'}
+				<SquareStack
+					class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
+					onclick={() => {
+						haptic('light');
+						home.selectMode = !home.selectMode;
+						if (!home.selectMode) home.selectedTitles = [];
+					}}
 					/>
-					<Trash
-						onclick={() => {
-							confirmState.open = true;
+				<Trash
+					onclick={() => {
+						haptic('medium');
+						confirmState.open = true;
 							confirmState.title = 'Delete Space?';
 							confirmState.message = spaceview.pageTitle + ' will be permanently deleted';
 							confirmState.confirmText = 'Delete';
 							confirmState.onConfirm = () => {
-								localSpaces.current.forEach((spc: any) => {
-									if (spc.name === spaceview.pageTitle) {
-										let tempArr = localSpaces.current.filter(
-											(item: any) => item.name !== spaceview.pageTitle
-										);
-										localSpaces.current = tempArr;
-									}
-								});
-								toast.success('Space Deleted', {
-									
-									duration: 2000
-								});
-								history.back();
+								try {
+									localSpaces.current.forEach((spc: any) => {
+										if (spc.name === spaceview.pageTitle) {
+											let tempArr = localSpaces.current.filter(
+												(item: any) => item.name !== spaceview.pageTitle
+											);
+											localSpaces.current = tempArr;
+										}
+									});
+									toast.success('Space Deleted', { duration: 2000 });
+									history.back();
+								} catch (err) {
+									console.error('Failed to delete space:', err);
+									toast.error('Failed to delete space', { duration: 2000 });
+								}
 							};
 						}}
 						class="size-7"
 					/>
-					{#if !home.spaceviewLayout}
-						<StretchHorizontal
-							onclick={() => {
-								home.spaceviewLayout = !home.spaceviewLayout;
-							}}
-							class="size-7"
-						/>
-					{:else}
-						<LayoutGrid
-							onclick={() => {
-								home.spaceviewLayout = !home.spaceviewLayout;
-							}}
-							class="size-7"
-						/>
+				{#if !home.spaceviewLayout}
+					<StretchHorizontal
+						onclick={() => {
+							haptic('light');
+							home.spaceviewLayout = !home.spaceviewLayout;
+						}}
+						class="size-7"
+					/>
+				{:else}
+					<LayoutGrid
+						onclick={() => {
+							haptic('light');
+							home.spaceviewLayout = !home.spaceviewLayout;
+						}}
+						class="size-7"
+					/>
 					{/if}
 				{/if}
 			{/snippet}
@@ -848,7 +1061,7 @@ import {
 	{#if page.route.id === '/tabs/home'}
 		<div class="px-3 pb-4">
 			<hr class="hr" />
-			<form onsubmit={handleSubmit} class="space-y-4 pt-2">
+			<form onsubmit={(e) => e.preventDefault()} class="space-y-4 pt-2">
 				<div>
 					<label for="item-title" class="block pb-0.5 text-sm font-medium text-surface-300"
 						>Title</label
@@ -863,9 +1076,10 @@ import {
 							required
 							placeholder="e.g. My Awesome Link"
 						/>
-						{#if sharedItem.title.length > 0}
+							{#if sharedItem.title.length > 0}
 							<X
 								onclick={() => {
+									haptic('light');
 									sharedItem.title = '';
 								}}
 								class="absolute right-0 m-2 size-5 cursor-pointer text-surface-400 hover:text-surface-200"
@@ -879,32 +1093,46 @@ import {
 						>Description</label
 					>
 					<div class="relative">
-						{#if sharedItem.text.length > 0}
-							<X
-								onclick={() => {
-									sharedItem.text = '';
-								}}
+					{#if sharedItem.text.length > 0}
+						<X
+							onclick={() => {
+								haptic('light');
+								sharedItem.text = '';
+							}}
 								class="absolute right-2 top-2 z-10 size-5 cursor-pointer text-surface-400 hover:text-surface-200"
 							/>
 						{/if}
 						<textarea
 							id="item-desc"
 							class="input-group bg-primary-500/20 ig-input w-full overflow-y-auto focus:ring-2 focus:ring-primary-400"
-							rows="3"
+							rows="1"
 							placeholder="Describe this item..."
 							bind:value={sharedItem.text}
 						></textarea>
 					</div>
 				</div>
-				{@render Fileupload()}
-
-				<div class="flex items-center gap-3 py-1">
-					<span class="h-px flex-1 bg-surface-600/30"></span>
-					<span class="text-xs font-medium uppercase tracking-wider text-surface-400"
-						>Or paste a link</span
-					>
-					<span class="h-px flex-1 bg-surface-600/30"></span>
-				</div>
+				{#if sharedItem.img && sharedItem.img !== noImageUrl && sharedItem.images.length === 0}
+					<div>
+						<label class="block pb-0.5 text-sm font-medium text-surface-300">Image</label>
+						<div class="relative inline-block">
+							<img
+								src={sharedItem.img}
+								alt="Fetched preview"
+								class="h-32 w-32 rounded-lg object-cover"
+							/>
+							<button
+								type="button"
+								onclick={() => { haptic('light'); sharedItem.img = noImageUrl; }}
+								class="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-transform hover:scale-110"
+							>
+								<X class="size-3" />
+							</button>
+							<p class="text-xs text-surface-400 mt-1">Fetched from web</p>
+						</div>
+					</div>
+				{:else}
+					{@render Fileupload()}
+				{/if}
 
 				<div>
 					<label for="item-url" class="block pb-0.5 text-sm font-medium text-surface-300"
@@ -932,6 +1160,7 @@ import {
 						{#if url.length > 0}
 							<X
 								onclick={() => {
+									haptic('light');
 									url = '';
 								}}
 								class="absolute right-0 m-2 size-5 cursor-pointer text-surface-400 hover:text-surface-200"
@@ -939,6 +1168,7 @@ import {
 						{:else}
 							<Clipboard
 								onclick={() => {
+									haptic('light');
 									navigator.clipboard
 										.readText()
 										.then((text) => {
@@ -962,20 +1192,22 @@ import {
 					</div>
 					<div class="flex gap-2 overflow-auto pb-2">
 						{#each localSpaces.current as obj}
-							{#if obj.name === chipName}
-								<button
-									onclick={() => {
-										chipName = '';
-									}}
+						{#if obj.name === chipName}
+							<button
+								onclick={() => {
+									haptic('light');
+									chipName = '';
+								}}
 									type="button"
 									class="badge bg-{obj.clr}-400/30 text-{obj.clr}-400 rounded-full"
 									>{obj.name}</button
 								>
-							{:else}
-								<button
-									onclick={() => {
-										chipName = obj.name;
-									}}
+						{:else}
+							<button
+								onclick={() => {
+									haptic('light');
+									chipName = obj.name;
+								}}
 									type="button"
 									class="badge preset-outlined rounded-full">{obj.name}</button
 								>
@@ -983,6 +1215,7 @@ import {
 						{/each}
 						<button
 							onclick={() => {
+								haptic('light');
 								goto('/tabs/space');
 								home.pageTitle = 'Space';
 							}}
@@ -993,9 +1226,9 @@ import {
 				{/if}
 				<article>
 					<div class="flex items-center gap-2">
-					<button
-						type="button"
-						onclick={() => { sharedItem.pinned = !sharedItem.pinned; }}
+				<button
+					type="button"
+					onclick={() => { haptic('light'); sharedItem.pinned = !sharedItem.pinned; }}
 						class="flex items-center justify-center rounded-xl p-3 transition-colors {sharedItem.pinned ? 'bg-tertiary-500/20 text-tertiary-400' : 'bg-white/5 text-white/30 hover:text-white/70'}"
 						title={sharedItem.pinned ? 'Pinned' : 'Pin to top'}
 					>
@@ -1013,59 +1246,78 @@ import {
 							(url === '' && (sharedItem.title === '' || sharedItem.text === ''))
 								? 'opacity-50'
 								: 'opacity-100'} preset-filled rounded-xl p-3 font-medium"
-						onclick={() => {
+					onclick={() => {
+						haptic('medium');
+						if (isSubmitting) return;
 							if (url !== '' && ogData) {
-								if (ogData.image === '') {
-									sharedItem.img = noImageUrl;
-								} else {
-									sharedItem.img = ogData.image;
-								}
-								if (ogData) {
-									localItems.current.push(sharedItem);
-									addItemToSpace(sharedItem);
+								isSubmitting = true;
+								try {
+									if (localItems.current.some((i: any) => isDuplicateItem(i, url, sharedItem.title))) {
+										toast.error('Item with this URL or title already exists', { duration: 1500 });
+										isSubmitting = false;
+										return;
+									}
+									const img = ogData.image === '' ? noImageUrl : ogData.image;
+									const newItem = {
+										title: sharedItem.title,
+										img,
+										images: [img],
+										link: ogData.siteName || '',
+										text: sharedItem.text,
+										date: new Date().toLocaleDateString(),
+										url,
+										pinned: sharedItem.pinned
+									};
+									localItems.current.push(newItem);
+									addItemToSpace(newItem);
 									navbarExpanded = false;
-									url =
-										sharedItem.img =
-										sharedItem.link =
-										sharedItem.text =
-										sharedItem.title =
-										sharedItem.url =
-											'';
-								} else {
-									toast.error('Error fetching OpenGraph data', {
-										
-										duration: 1500
-									});
-								}
-							} else if (sharedItem.title !== '' && sharedItem.text !== '') {
-								if (sharedItem.img === '') {
-									sharedItem.img = noImageUrl;
-								}
-								localItems.current.push(sharedItem);
-								addItemToSpace(sharedItem);
-								navbarExpanded = false;
-								toast.success('Item Added', {
-									
-									duration: 1500
-								});
-								url =
-									sharedItem.img =
-									sharedItem.link =
-									sharedItem.text =
-									sharedItem.title =
-									sharedItem.url =
-										'';
-							} else if (url !== '') {
-								toast.error('Link invalid or "https://" missing', {
-									
-									duration: 2000
-								});
+									toast.success('Item Added', { duration: 1500 });
+									url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
+								sharedItem.images = [];
+								fileLookup.clear();
+							} catch (err) {
+								console.error('Failed to add item:', err);
+								toast.error('Failed to add item', { duration: 2000 });
+							} finally {
+								isSubmitting = false;
+							}
+						} else if (sharedItem.title !== '' && sharedItem.text !== '') {
+								isSubmitting = true;
+								try {
+									if (localItems.current.some((i: any) => isDuplicateItem(i, url, sharedItem.title))) {
+										toast.error('Item with this URL or title already exists', { duration: 1500 });
+										isSubmitting = false;
+										return;
+									}
+									const imgs = sharedItem.images.length > 0 ? sharedItem.images : [sharedItem.img || noImageUrl];
+									const newItem = {
+										title: sharedItem.title,
+										img: imgs[0],
+										images: imgs,
+										link: sharedItem.link,
+										text: sharedItem.text,
+										date: new Date().toLocaleDateString(),
+										url,
+										pinned: sharedItem.pinned
+									};
+									localItems.current.push(newItem);
+									addItemToSpace(newItem);
+									navbarExpanded = false;
+									toast.success('Item Added', { duration: 1500 });
+									url = sharedItem.img = sharedItem.link = sharedItem.text = sharedItem.title = sharedItem.url = '';
+								sharedItem.images = [];
+								fileLookup.clear();
+							} catch (err) {
+								console.error('Failed to add item:', err);
+								toast.error('Failed to add item', { duration: 2000 });
+							} finally {
+								isSubmitting = false;
+							}
+						} else if (url !== '') {
+								toast.error('Link invalid or "https://" missing', { duration: 2000 });
 							} else {
 								console.log('Important Fields Empty');
-								toast.error('Important fields are missing', {
-									
-									duration: 1500
-								});
+								toast.error('Important fields are missing', { duration: 1500 });
 							}
 						}}
 					>
@@ -1081,13 +1333,13 @@ import {
 				<button
 					type="button"
 					class="w-full py-1 text-sm text-white/50 hover:text-white/80 transition-colors"
-					onclick={closeExpanded}>Cancel</button>
+					onclick={() => { haptic('light'); closeExpanded(); }}>Cancel</button>
 			</form>
 		</div>
 		{:else if page.route.id === '/tabs/space'}
-			<div class="px-3 pb-4">
+	<div class="px-3 pb-2">
 				<hr class="hr" />
-				<form class="space-y-4 pt-2">
+			<form onsubmit={(e) => e.preventDefault()} class="space-y-2 pt-2">
 					<div>
 						<label for="space-name" class="block pb-0.5 text-sm font-medium text-surface-300"
 							>Space Name</label
@@ -1123,30 +1375,26 @@ import {
 						<button
 							type="submit"
 							class="btn preset-filled w-full rounded-xl bg-{space.clr}-400 p-3 font-medium"
-							onclick={() => {
-								if (space.name !== '') {
-									if (!localSpaces.current.find((spc: any) => spc.name === space.name)) {
-										console.log('space added: ' + space.name);
-										localSpaces.current.push(space);
-										navbarExpanded = !navbarExpanded;
-										toast.success('Space "' + space.name + '" Created', {
-											
-											duration: 1500
-										});
-										space.clr = 'purple';
-										space.name = space.desc = '';
-									} else {
-										toast.error('Space "' + space.name + '" already exists', {
-											
-											duration: 1500
-										});
-									}
-								} else {
-									console.log('Important Fields Empty in Spaces');
-									toast.error('Important fields are missing', {
-										
-										duration: 1500
-									});
+						onclick={() => {
+							haptic('medium');
+							if (space.name === '') {
+									toast.error('Important fields are missing', { duration: 1500 });
+									return;
+								}
+								if (localSpaces.current.find((spc: any) => spc.name === space.name)) {
+									toast.error('Space "' + space.name + '" already exists', { duration: 1500 });
+									return;
+								}
+								try {
+									const newSpace = { name: space.name, clr: space.clr, desc: space.desc, items: [] };
+									localSpaces.current.push(newSpace);
+									navbarExpanded = !navbarExpanded;
+									toast.success('Space "' + space.name + '" Created', { duration: 1500 });
+									space.clr = 'purple';
+									space.name = space.desc = '';
+								} catch (err) {
+									console.error('Failed to create space:', err);
+									toast.error('Failed to create space', { duration: 2000 });
 								}
 							}}>Add Space</button>
 					</article>
@@ -1160,191 +1408,47 @@ import {
 {/snippet}
 
 {#snippet Fileupload()}
-	<div class="">
+	<div class="space-y-1">
 		<FileUpload
 			name="image"
 			accept="image/*"
-			maxFiles={2}
+			maxFiles={10}
 			subtext=""
 			onFileChange={generatePreview}
 			onFileReject={console.error}
+			onApiReady={(api) => { uploadApi = api; }}
 			classes=" w-full bg-primary-500/20 rounded-lg"
 			label=""
 		>
 			{#snippet iconInterface()}
-				{#if sharedItem.img !== ''}
-					<img alt="uploaded" class="h-30" src={sharedItem.img} />
-				{:else}
-					<ImagePlus class="h-12 w-12" />
-				{/if}
+				<ImagePlus class="h-8 w-8" />
 			{/snippet}
-
 			{#snippet iconFile()}
-				<File class="size-4" />{/snippet}
-			{#snippet iconFileRemove()}<XCircle
-					onclick={() => {
-						sharedItem.img = '';
-					}}
-					class="size-4"
-				/>{/snippet}
+				<FileIcon class="size-4" />{/snippet}
+			{#snippet iconFileRemove()}
+				<XCircle class="size-4" />
+			{/snippet}
 		</FileUpload>
-	</div>
-{/snippet}
-{#snippet CardDropDown()}
-	<div class="divide-y divide-white/10 text-sm font-bold">
-		{#if cardPage.url !== ''}
-			<a target="_blank" href={cardPage.url}>
-				<div class="flex items-center justify-between px-2 py-4 text-yellow-300 transition-colors hover:text-yellow-200 active:scale-[0.98]">
-					<span>Open Link</span>
-					<Link class="size-4" />
-				</div>
-			</a>
-		{/if}
-
-		{#each localSpaces.current as spaceObj}
-			{#each spaceObj.items as obj}
-				{#if obj.title === cardPage.title}
-					<div
-						onclick={(e) => {
-							e.stopPropagation();
-							dropMenu = false;
-							confirmState.open = true;
-							confirmState.title = 'Remove from ' + spaceObj.name + '?';
-							confirmState.message = cardPage.title;
-							confirmState.confirmText = 'Remove';
-							confirmState.onConfirm = () => {
-								const deletedItem = cardPage;
-								spaceObj.items.forEach((item: any) => {
-									if (item.title === cardPage.title) {
-										let tempArr2 = spaceObj.items.filter(
-											(item: any) => item.title !== cardPage.title
-										);
-										spaceObj.items = tempArr2;
-									}
-								});
-								spaceview.viewItems.forEach((item: any) => {
-									if (item.title === cardPage.title) {
-										let tempArr3 = spaceview.viewItems.filter(
-											(item: any) => item.title !== cardPage.title
-										);
-										spaceview.viewItems = tempArr3;
-									}
-								});
-								const msg = truncate(cardPage.title) + ' removed';
-								setUndoRemove(msg, [deletedItem], spaceObj.name);
-								toast.success(msg, {
-									
-									duration: 2000
-								});
-							};
-						}}
-						class="flex cursor-pointer items-center justify-between px-2 py-4 text-{spaceObj.clr}-400 transition-colors hover:text-{spaceObj.clr}-300 active:scale-[0.98]"
-					>
-						<span class="truncate">Delete From {spaceObj.name}</span>
-						<CircleOff class="size-4 shrink-0" />
-					</div>
-				{/if}
-			{/each}
-		{/each}
-
-		{#if spaceMenu}
-			<!-- svelte-ignore a11y_click_events_have_key_events -->
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div transition:slide|global>
-				<div
-					onclick={() => { spaceMenu = false; }}
-					class="flex cursor-pointer items-center gap-2 px-2 py-4 transition-colors hover:text-white active:scale-[0.98]"
-				>
-					<ArrowLeft class="size-4" />
-					<span>Back</span>
-				</div>
-				<div class="max-h-48 overflow-y-auto">
-					{#each [...localSpaces.current].reverse() as item}
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<div
-							onclick={() => {
-								const isInSpace = item.items.some((i: any) => i.title === cardPage.title);
-								if (isInSpace) {
-									item.items = item.items.filter((i: any) => i.title !== cardPage.title);
-									toast.success('Item Removed from ' + item.name, {
-										
-										duration: 1500
-									});
-								} else {
-									item.items.push(cardPage);
-									toast.success('Item Added to ' + item.name, {
-										
-										duration: 1500
-									});
-								}
-								spaceMenu = false;
-							}}
-							class="flex cursor-pointer items-center justify-between px-2 py-3 transition-colors hover:text-white active:scale-[0.98]"
+		{#if sharedItem.images.length > 0}
+			<div class="flex gap-2 overflow-x-auto pb-1 snap-x">
+				{#each sharedItem.images as img, i}
+					<div class="relative shrink-0 snap-start">
+						<img
+							src={img}
+							alt="uploaded {i + 1}"
+							class="h-16 w-16 rounded-lg object-cover"
+						/>
+						<button
+							type="button"
+							onclick={() => { haptic('light'); removeImage(i) }}
+							class="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-transform hover:scale-110"
 						>
-							<span class="flex min-w-0 items-center gap-2 pr-2">
-								<span class="h-2.5 w-2.5 shrink-0 rounded-full bg-{item.clr}-400"></span>
-								<span class="truncate">{item.name}</span>
-							</span>
-							{#if item.items.some((i: any) => i.title === cardPage.title)}
-								<Check class="size-4 shrink-0 text-green-400" />
-							{:else}
-								<Plus class="size-4 shrink-0 text-white/50" />
-							{/if}
-						</div>
-					{/each}
-				</div>
-			</div>
-		{:else if localSpaces.current.length > 0}
-			<div
-				onclick={() => { spaceMenu = true; }}
-				class="flex cursor-pointer items-center justify-between px-2 py-4 transition-colors hover:text-white active:scale-[0.98]"
-			>
-				<span>Add To Space</span>
-				<CircleDashed class="size-4" />
+							<X class="size-3" />
+						</button>
+					</div>
+				{/each}
 			</div>
 		{/if}
-
-		<div
-			onclick={(e) => {
-				e.stopPropagation();
-				dropMenu = false;
-				confirmState.open = true;
-				confirmState.title = 'Delete Item?';
-				confirmState.message = cardPage.title;
-				confirmState.confirmText = 'Delete';
-				confirmState.onConfirm = () => {
-					const deletedItem = localItems.current.find((i: any) => i.title === cardPage.title);
-					const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-					for (const spc of localSpaces.current) {
-						if (spc.items.some((i: any) => i.title === cardPage.title)) {
-							spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
-						}
-					}
-					let tempArr = localItems.current.filter((item: any) => item.title !== cardPage.title);
-					localItems.current = tempArr;
-					localSpaces.current.forEach((spc: any) => {
-						spc.items.forEach((item: any) => {
-							if (item.title === cardPage.title) {
-								let tempArr2 = spc.items.filter((item: any) => item.title !== cardPage.title);
-								spc.items = tempArr2;
-							}
-						});
-					});
-					const msg = truncate(cardPage.title) + ' Deleted';
-					setUndo(msg, [deletedItem], spaceMappings);
-					toast.success(msg, {
-						
-						duration: 2000
-					});
-					history.back();
-				};
-			}}
-			class="flex cursor-pointer items-center justify-between px-2 py-4 text-red-400 transition-colors hover:text-red-300 active:scale-[0.98]"
-		>
-			<span>Delete</span>
-			<Trash class="size-4" />
-		</div>
 	</div>
 {/snippet}
 
@@ -1354,19 +1458,21 @@ import {
 			<p class="text-center text-2xl font-bold">{confirmState.title}</p>
 			<p class="text-md pb-4 text-center font-mono">{confirmState.message}</p>
 			<div class="flex w-full items-center justify-around gap-4">
-				<button
-					onclick={() => {
-						confirmState.onConfirm?.();
-						confirmState.open = false;
-					}}
+			<button
+				onclick={() => {
+					haptic('heavy');
+					confirmState.onConfirm?.();
+					confirmState.open = false;
+				}}
 					class="btn btn-primary h-[40%] w-full bg-red-300/20 p-2 font-mono text-lg font-bold text-red-400"
 				>
 					{confirmState.confirmText}
 				</button>
-				<button
-					onclick={() => {
-						confirmState.open = false;
-					}}
+			<button
+				onclick={() => {
+					haptic('light');
+					confirmState.open = false;
+				}}
 					class="btn btn-secondary w-full bg-green-300/20 p-2 font-mono text-lg font-bold text-green-300"
 				>
 					No, don't

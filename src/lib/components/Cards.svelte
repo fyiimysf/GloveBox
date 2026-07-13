@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import NoImageUrl from '$lib/assets/no-image.png';
-	import { cardPage, saveCardPage, home, longpress } from '$lib/shared.svelte';
+	import { cardPage, saveCardPage, home, longpress, sheetState, haptic } from '$lib/shared.svelte';
 	import { blur } from 'svelte/transition';
 	import DropDown from './DropDownButton.svelte';
 	import { Link, Pin, Square, CheckSquare } from 'lucide-svelte';
@@ -39,11 +39,13 @@
 
 	function handleNav(e: MouseEvent) {
 		if (selectMode) {
+			haptic('light');
 			onselect(!selected);
 			return;
 		}
 		cardPage.title = item.title;
 		cardPage.img = item.img;
+		cardPage.images = item.images || (item.img ? [item.img] : []);
 		cardPage.link = item.link;
 		cardPage.text = item.text;
 		cardPage.date = item.date;
@@ -59,9 +61,18 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	use:longpress={() => {
-		home.selectMode = true;
-		onselect(true);
+	use:longpress={{
+		onFirst: () => {
+			home.selectMode = true;
+			onselect(true);
+		},
+		onSecond: () => {
+			home.selectMode = false;
+			home.selectedTitles = [];
+			sheetState.open = true;
+			sheetState.data = item;
+			sheetState.spacePicker = false;
+		}
 	}}
 	onclick={handleNav}
 	class="card divide-surface-200-800 relative {selectMode ? 'cursor-pointer' : ''} {selected ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-transparent shadow-lg shadow-primary-500/20' : ''} transition-all duration-200"
@@ -69,10 +80,11 @@
 	{#if selectMode}
 		<div
 			class="absolute top-2 right-2 z-20"
-			onclick={(e) => {
-				e.stopPropagation();
-				onselect(!selected);
-			}}
+		onclick={(e) => {
+			e.stopPropagation();
+			haptic('light');
+			onselect(!selected);
+		}}
 		>
 			{#if selected}
 				<CheckSquare class="size-6 text-primary-400 drop-shadow-md" />
@@ -94,9 +106,9 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class="text-primary-200 absolute right-3 z-11 mt-3 rounded-full bg-black/60 shadow-lg"
+					class="text-white absolute right-1 mt-1 shadow-lg"
 					onclick={(e) => e.stopPropagation()}
-					><Link class="size-7 p-1 mix-blend-difference backdrop-blur-sm rounded-lg" /></a
+					><Link class=" size-6 p-1 mix-blend-difference backdrop-blur-xs rounded-lg " /></a
 				>
 			{/if}
 			<header>
