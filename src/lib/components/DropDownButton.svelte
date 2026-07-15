@@ -13,9 +13,9 @@
 </script>
 
 <button
-	class="text-white p-0.5 "
+	class=" p-0.5 "
 	type="button"
 	onclick={openSheet}
 >
-	<MoreVertical class="size-5.5 mix-blend-difference backdrop-blur-md rounded-md" />
+	<MoreVertical class="text-white size-5.5 mix-blend-difference backdrop-blur-lg rounded-md" />
 </button>

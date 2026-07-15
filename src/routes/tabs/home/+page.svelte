@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { blur, draw, fade, fly, scale, slide } from 'svelte/transition';
 	import type { PageProps } from '../../$types';
+	import { dndzone } from 'svelte-dnd-action';
+	import type { DndEvent } from 'svelte-dnd-action';
 
 	import { cardPage, home, localItems, localSpaces, spaceview, confirmState, truncate, setUndo, saveCardPage, togglePinSelectedItems, scrollableVignette, longpress, sheetState, haptic } from '../../../lib/shared.svelte';
 	import {
@@ -8,6 +10,7 @@
 		ArrowLeft,
 		CircleMinus,
 		CircleDotDashed,
+		GripVertical,
 		Pin,
 		Trash2,
 		Square,
@@ -26,10 +29,65 @@
 	const imgError = (e: any) => (e.target.src = NoImageUrl);
 
 	let spaceMenu = $state(false);
+	let dndItems: any[] = $state([]);
+
+	const flipDurationMs = 200;
+	const flipDurationMsGrid = 150;
+
+	function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
+		dndItems = e.detail.items;
+	}
+
+	function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
+		dndItems = e.detail.items;
+		const all = [...localItems.current];
+		const pinned = all.filter((i: any) => i.pinned);
+		const unpinned = all.filter((i: any) => !i.pinned);
+		const reversed = [...dndItems].reverse();
+		const reordered = reversed.map((item: any) => pinned.find((i: any) => i.title === item.title)).filter(Boolean);
+		localItems.current = [...reordered, ...unpinned];
+		haptic('medium');
+	}
 
 	let pinnedItems = $derived([...localItems.current].filter((i: any) => i.pinned).reverse().slice(0, 16));
 	let recentItems = $derived([...localItems.current].filter((i: any) => !i.pinned).reverse().slice(0, 16));
 	let allVisibleItems = $derived([...pinnedItems, ...recentItems]);
+
+	let reorderContainer: HTMLDivElement;
+	let autoScrollRaf: number | null = null;
+	let pointerY = 0;
+
+	function autoScrollLoop() {
+		if (!reorderContainer) return;
+		const rect = reorderContainer.getBoundingClientRect();
+		const edgeSize = 60;
+		const maxSpeed = 8;
+		const distFromTop = pointerY - rect.top;
+		const distFromBottom = rect.bottom - pointerY;
+		let scrollAmount = 0;
+		if (distFromTop >= 0 && distFromTop < edgeSize) {
+			scrollAmount = -maxSpeed * (1 - distFromTop / edgeSize);
+		} else if (distFromBottom >= 0 && distFromBottom < edgeSize) {
+			scrollAmount = maxSpeed * (1 - distFromBottom / edgeSize);
+		}
+		if (scrollAmount !== 0) {
+			reorderContainer.scrollTop += scrollAmount;
+		}
+		autoScrollRaf = requestAnimationFrame(autoScrollLoop);
+	}
+
+	$effect(() => {
+		if (home.reorderMode) {
+			dndItems = pinnedItems.map((item: any) => ({ ...item, id: item.title }));
+			const onMove = (e: PointerEvent) => { pointerY = e.clientY; };
+			document.addEventListener('pointermove', onMove);
+			autoScrollRaf = requestAnimationFrame(autoScrollLoop);
+			return () => {
+				document.removeEventListener('pointermove', onMove);
+				if (autoScrollRaf) { cancelAnimationFrame(autoScrollRaf); autoScrollRaf = null; }
+			};
+		}
+	});
 
 	function addSelectedToSpace(spc: any) {
 		try {
@@ -48,7 +106,7 @@
 			toast.error('Failed to add items to space', { duration: 2000 });
 		}
 		home.selectedTitles = [];
-		home.selectMode = false;
+		home.selectMode = false; home.reorderMode = false;
 		spaceMenu = false;
 	}
 
@@ -57,7 +115,7 @@
 			haptic('light');
 			if (home.selectedTitles.includes(item.title)) {
 				home.selectedTitles = home.selectedTitles.filter((t: string) => t !== item.title);
-				if (home.selectedTitles.length === 0) home.selectMode = false;
+				if (home.selectedTitles.length === 0) { home.selectMode = false; home.reorderMode = false; }
 			} else {
 				home.selectedTitles = [...home.selectedTitles, item.title];
 			}
@@ -89,13 +147,13 @@
 
 <div in:blur class="relative z-5 grid content-start space-y-3" onclick={(e) => {
 	if (home.selectMode && !(e.target as HTMLElement).closest('.card-link')) {
-		home.selectMode = false;
+		home.selectMode = false; home.reorderMode = false;
 		home.selectedTitles = [];
 	}
 }}>
 	{#if localItems.current.length > 0}
-		{#if recentItems.length > 0}
-			<div class="flex items-center justify-between">
+	{#if recentItems.length > 0 && !home.reorderMode}
+		<div transition:fade={{ duration: 200 }} class="flex items-center justify-between">
 				<p class="h3 p-0 font-thin">Recent <span class="text-sm font-normal align-middle text-white/40">{localItems.current.length}</span></p>
 				<a
 					href="/tabs/home/saved"
@@ -123,14 +181,41 @@
 		{/if}
 
 		{#if pinnedItems.length > 0}
-			<p class="h3 p-0 font-thin">Pinned</p>
-			<div use:scrollableVignette={'vertical'} class="xs:max-h-96 max-h-[calc(50dvh-10rem)] overflow-y-auto grid grid-cols-2 gap-3 pr-1 p-1">
+			<div class="flex items-center justify-between">
+				<p class="h3 p-0 font-thin">Pinned</p>
+				<a
+					href="/tabs/home/saved"
+					onclick={() => { spaceview.clr = 'purple'; }}
+					class="text-sm font-medium text-primary-400 pr-1"
+				>Show All</a>
+			</div>
+		{#if home.reorderMode}
+			<div in:fade={{ duration: 200 }} bind:this={reorderContainer}
+				use:dndzone={{ items: dndItems, flipDurationMs: flipDurationMsGrid, type: 'pinned', dropTargetStyle: {}, morphDisabled: true }}
+				onconsider={handleDndConsider}
+				onfinalize={handleDndFinalize}
+				use:scrollableVignette={'vertical'}
+				class="max-h-[calc(88dvh-12rem)] overflow-y-auto overscroll-y-contain grid grid-cols-2 gap-3 pr-1 p-1 touch-pan-y"
+			>
+				{#each dndItems as item, i (item.id)}
+					<div class="cursor-grab active:cursor-grabbing touch-none rounded-xl bg-primary-900/50 border border-surface-200-800/50 px-3 py-2.5">
+						<div class="flex items-center gap-2">
+							<GripVertical class="size-4 shrink-0 text-white/50" />
+							<span class="text-[10px] font-bold text-white/30 w-4 text-right">{i + 1}</span>
+							<span class="truncate text-sm font-bold">{item.title}</span>
+						</div>
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<div in:fade={{ duration: 200 }} use:scrollableVignette={'vertical'} class="{recentItems.length === 0 ? 'xs:max-h-[calc(86dvh-12rem)] max-h-[calc(82dvh-12rem)]' : 'xs:max-h-[calc(60dvh-10rem)] max-h-[20vh]'} overflow-y-auto grid grid-cols-2 gap-3 pr-1 p-1">
 				{#each pinnedItems as item, i (item.title)}
 					<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
 						{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
 					</div>
 				{/each}
 			</div>
+		{/if}
 		{/if}
 	{/if}
 </div>
@@ -153,7 +238,7 @@
 				}
 			},
 			onSecond: () => {
-				home.selectMode = false;
+				home.selectMode = false; home.reorderMode = false;
 				home.selectedTitles = [];
 				sheetState.open = true;
 				sheetState.data = item;
@@ -195,7 +280,7 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="absolute right-3 mt-2 rounded-full  text-white shadow-lg"
+						class="absolute right-3 mt-2 rounded-full  text-white"
 						onclick={(e) => e.stopPropagation()}
 						><Link class=" size-7 p-1 mix-blend-difference backdrop-blur-sm rounded-lg" /></a
 					>
@@ -219,7 +304,7 @@
 						<div>
 							<p class="p">{h1}</p>
 						</div>
-						<small class="line-clamp-2 break-words opacity-60">{p}</small>
+						<small class="line-clamp-2 wrap-break-word opacity-60">{p}</small>
 					</article>
 					<hr class="hr" />
 					<footer
@@ -234,7 +319,7 @@
 			<div
 				class="card border-surface-200-800/0 card-hover relative block h-fit w-full rounded-xl border-[0.5px] transition-all duration-200"
 			>
-				<div class="absolute m-1">
+				<div class="absolute m-0.5">
 					<DropDown data={item} />
 				</div>
 				{#if home.selectMode}
@@ -258,9 +343,9 @@
 					<a
 						href={item.url}
 						target="_blank"
-						class="absolute right-1 mt-1 rounded-full text-white shadow-lg"
+						class="absolute right-1 mt-1 "
 						onclick={(e) => e.stopPropagation()}
-						><Link class=" size-6 p-1 mix-blend-difference backdrop-blur-sm rounded-lg"  /></a
+						><Link class="text-surface-400 size-6 p-1 mix-blend-difference backdrop-blur-lg rounded-lg"  /></a
 					>
 				{/if}
 				<a
@@ -296,92 +381,111 @@
 
 
 {#if home.selectMode}
-	<div
-		in:fly={{ y: 40, duration: 200 }}
-		class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 overflow-x-auto rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10"
-	>
-		<button
-			class="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
-			onclick={toggleSelectAll}
-		>
-			{#if allVisibleItems.every((item: any) => home.selectedTitles.includes(item.title))}
-				<CheckSquare class="size-4" />
-				All
-			{:else}
-				<Square class="size-4" />
-				All
-			{/if}
-		</button>
-		<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/80">{home.selectedTitles.length}</span>
-		{#if home.selectedTitles.length > 0}
-			<span class="ml-auto flex items-center gap-1">
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-yellow-300/80 transition-colors duration-200 hover:bg-white/10 hover:text-yellow-300"
-					onclick={() => { spaceMenu = true; }}
-				>
-					<CircleDotDashed class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
-					onclick={() => { haptic('light'); togglePinSelectedItems('home'); }}
-				>
-					<Pin class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
-					onclick={() => {
-						haptic('medium');
-						confirmState.open = true;
-						confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
-						confirmState.message = 'This will remove them from all spaces too';
-						confirmState.confirmText = 'Delete All';
-						confirmState.onConfirm = () => {
-							try {
-								let titles = home.selectedTitles;
-								const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
-								const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-								for (const spc of localSpaces.current) {
-									const matching = spc.items.filter((i: any) => titles.includes(i.title));
-									if (matching.length > 0) {
-										spaceMappings.push({ spaceName: spc.name, items: matching });
-									}
-								}
-								let tempArr = localItems.current.filter(
-									(item: any) => !titles.includes(item.title)
-								);
-								localItems.current = tempArr;
-								localSpaces.current.forEach((spc: any) => {
-									spc.items = spc.items.filter(
-										(item: any) => !titles.includes(item.title)
-									);
-								});
-								const msg = titles.length + ' items Deleted';
-								setUndo(msg, deletedItems, spaceMappings);
-								toast.success(msg, { duration: 2000 });
-							} catch (err) {
-								console.error('Failed to delete items:', err);
-								toast.error('Failed to delete items', { duration: 2000 });
-							}
-							home.selectedTitles = [];
-							home.selectMode = false;
-						};
-					}}
-				>
-					<Trash2 class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
-					onclick={() => {
-						haptic('light');
-						home.selectedTitles = [];
-						home.selectMode = false;
-					}}
-				>
-					<X class="size-4" />
-				</button>
-			</span>
+	<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+		{#if home.selectedTitles.length === 0}
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-all duration-400 {home.reorderMode ? 'text-surface-300 bg-error-950/90 px-[15vw] border-0' : 'text-surface-500 hover:bg-black/90 hover:text-white'}"
+				onclick={() => { haptic('light'); home.reorderMode = !home.reorderMode; }}
+			>
+				<GripVertical class="size-5 rotate-90 {home.reorderMode ? 'hidden' : ''}" />
+				<span class="px-1.5 pt-0.5 text-xs {home.reorderMode ? 'text-error-200' : 'text-surface-400'}">{!home.reorderMode ? "Reorder" : "Cancel"}</span>
+
+			</button>
 		{/if}
 	</div>
+
+	{#if home.selectedTitles.length > 0}
+		<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-row items-center gap-2">
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+				onclick={toggleSelectAll}
+			>
+				{#if allVisibleItems.every((item: any) => home.selectedTitles.includes(item.title))}
+					<CheckSquare class="size-5 text-primary-400" />
+				{:else}
+					<Square class="size-5 text-primary-400" />
+				{/if}
+				<span class="px-1.5 pt-0.5 text-xs text-primary-300">{home.selectedTitles.length}</span>
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+				onclick={() => { spaceMenu = true; }}
+			>
+				<CircleDotDashed class="size-5 text-yellow-300/80" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+				onclick={() => { haptic('light'); togglePinSelectedItems('home'); }}
+			>
+				<Pin class="size-5 text-primary-400/80" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 {home.reorderMode ? 'text-primary-400 bg-primary-500/20' : 'text-white/50 hover:bg-black/90 hover:text-white'}"
+				onclick={() => { haptic('light'); home.reorderMode = !home.reorderMode; }}
+			>
+				<GripVertical class="size-5 rotate-90" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-red-500/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-red-400"
+				onclick={() => {
+					haptic('medium');
+					confirmState.open = true;
+					confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
+					confirmState.message = 'This will remove them from all spaces too';
+					confirmState.confirmText = 'Delete All';
+					confirmState.onConfirm = () => {
+						try {
+							let titles = home.selectedTitles;
+							const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
+							const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+							for (const spc of localSpaces.current) {
+								const matching = spc.items.filter((i: any) => titles.includes(i.title));
+								if (matching.length > 0) {
+									spaceMappings.push({ spaceName: spc.name, items: matching });
+								}
+							}
+							let tempArr = localItems.current.filter(
+								(item: any) => !titles.includes(item.title)
+							);
+							localItems.current = tempArr;
+							localSpaces.current.forEach((spc: any) => {
+								spc.items = spc.items.filter(
+									(item: any) => !titles.includes(item.title)
+								);
+							});
+							const msg = titles.length + ' items Deleted';
+							setUndo(msg, deletedItems, spaceMappings);
+							toast.success(msg, { duration: 2000 });
+						} catch (err) {
+							console.error('Failed to delete items:', err);
+							toast.error('Failed to delete items', { duration: 2000 });
+						}
+						home.selectedTitles = [];
+						home.selectMode = false; home.reorderMode = false;
+					};
+				}}
+			>
+				<Trash2 class="size-5 text-white" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center gap-1.5 rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 text-xs font-bold text-white/60 transition-colors duration-200 hover:bg-black/90 hover:text-white"
+				onclick={() => {
+					haptic('light');
+					home.selectedTitles = [];
+					home.selectMode = false; home.reorderMode = false;
+				}}
+			>
+				<p class="pt-1">Cancel</p>
+			</button>
+		</div>
+	{/if}
 {/if}
 
 {#if spaceMenu}

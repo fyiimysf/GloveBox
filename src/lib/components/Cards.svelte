@@ -106,9 +106,9 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class="text-white absolute right-1 mt-1 shadow-lg"
+					class="text-white absolute right-3 mt-2"
 					onclick={(e) => e.stopPropagation()}
-					><Link class=" size-6 p-1 mix-blend-difference backdrop-blur-xs rounded-lg " /></a
+					><Link class="text-primary-200 size-7 p-1 mix-blend-difference backdrop-blur-sm rounded-lg " /></a
 				>
 			{/if}
 			<header>
@@ -125,9 +125,9 @@
 			<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 			<article class="px-3 py-1">
 				<div>
-					<p class="p">{h1}</p>
+					<p class="p line-clamp-2">{h1}</p>
 				</div>
-				<small class="justify-start overflow-hidden wrap-break-word opacity-60">{p}</small>
+				<small class="justify-start overflow-hidden wrap-break-word opacity-60 line-clamp-3">{p}</small>
 			</article>
 			<footer class="flex items-center justify-between bg-black/10 px-3 py-1">
 				<small class="text-justify opacity-60">{fL}</small>
@@ -157,7 +157,7 @@
 				<a
 					href={item.url}
 					target="_blank"
-					class="text-white absolute right-1 mt-1 shadow-lg"
+					class="text-primary-200 absolute right-1 mt-1"
 					onclick={(e) => e.stopPropagation()}
 					><Link class=" size-6 p-1 mix-blend-difference backdrop-blur-xs rounded-lg " /></a
 				>

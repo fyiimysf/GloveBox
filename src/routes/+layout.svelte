@@ -48,6 +48,7 @@
 		Copy
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 import {
 	home,
 	localItems,
@@ -80,6 +81,7 @@ import {
 	const fileLookup = new Map<string, File>();
 	let navbarExpanded = $state(false);
 	let isSubmitting = $state(false);
+	let descFocused = $state(false);
 	let touchStartY = $state(0);
 	onMount(() => {
 		try {
@@ -105,7 +107,11 @@ import {
 		}
 		if (page.route.id !== '/tabs/home' && page.route.id !== '/tabs/home/saved' && page.route.id !== '/tabs/space/spaceview') {
 			home.selectMode = false;
+			home.reorderMode = false;
 			home.selectedTitles = [];
+		}
+		if (page.route.id !== '/tabs/space/spaceview') {
+			spaceview.reorderMode = false;
 		}
 	});
 
@@ -599,7 +605,7 @@ import {
 		{/if}
 		<div transition:slide|global class="transform-gpu fixed transition-all duration-700 {navbarExpanded ? 'bottom-0' : 'bottom-5 px-4'} z-11 w-full " class:opacity-0={page.route.id === '/tabs/space' && spaceSelect.selectMode} class:pointer-events-none={page.route.id === '/tabs/space' && spaceSelect.selectMode}>
 			<div
-				class="{navbarExpanded ? 'rounded-t-2xl' : 'rounded-[42px]'} border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
+				class="{navbarExpanded ? 'rounded-t-2xl' : 'rounded-[42px]'} border-2 backdrop-blur-xl overflow-hidden transition-all duration-500 ease-out {navbarExpanded ? 'border-b-1 border-primary-500/50 bg-black/60' : 'border-primary-500/30 bg-black/50'}"
 			>
 				<div class="h-20 relative overflow-hidden">
 					<div
@@ -873,7 +879,7 @@ import {
 					</center>
 			{:else if page.route.id === '/card'}
 				<center>
-					<h1 in:fade class="h1 w-70 truncate font-bold">{cardPage.title || cardPage.link}</h1>
+					<h1 in:fade class="h1 w-70 truncate font-bold">{cardPage.link || cardPage.title}</h1>
 				</center>
 				{:else if page.route.id === '/tabs/space/spaceview'}
 				<center>
@@ -924,7 +930,7 @@ import {
 						onclick={() => {
 							haptic('light');
 							home.selectMode = !home.selectMode;
-							if (!home.selectMode) home.selectedTitles = [];
+							if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; }
 						}}
 					/>
 				{:else if page.route.id === '/tabs/space'}
@@ -978,7 +984,7 @@ import {
 					onclick={() => {
 						haptic('light');
 						home.selectMode = !home.selectMode;
-						if (!home.selectMode) home.selectedTitles = [];
+						if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; }
 					}}
 					/>
 				{#if home.savedLayout}
@@ -1004,7 +1010,7 @@ import {
 					onclick={() => {
 						haptic('light');
 						home.selectMode = !home.selectMode;
-						if (!home.selectMode) home.selectedTitles = [];
+						if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; }
 					}}
 					/>
 				<Trash
@@ -1035,7 +1041,7 @@ import {
 						class="size-7"
 					/>
 				{#if !home.spaceviewLayout}
-					<StretchHorizontal
+					<LayoutGrid
 						onclick={() => {
 							haptic('light');
 							home.spaceviewLayout = !home.spaceviewLayout;
@@ -1043,7 +1049,7 @@ import {
 						class="size-7"
 					/>
 				{:else}
-					<LayoutGrid
+					<StretchHorizontal
 						onclick={() => {
 							haptic('light');
 							home.spaceviewLayout = !home.spaceviewLayout;
@@ -1104,34 +1110,40 @@ import {
 						{/if}
 						<textarea
 							id="item-desc"
-							class="input-group bg-primary-500/20 ig-input w-full overflow-y-auto focus:ring-2 focus:ring-primary-400"
-							rows="1"
+							class="input-group bg-primary-500/20 ig-input w-full overflow-y-auto focus:ring-2 focus:ring-primary-400 transition-[height] duration-300 ease-in-out"
+							style="height: {descFocused ? '120px' : '36px'}"
 							placeholder="Describe this item..."
 							bind:value={sharedItem.text}
+							onfocus={() => descFocused = true}
+							onblur={() => descFocused = false}
 						></textarea>
 					</div>
 				</div>
 				{#if sharedItem.img && sharedItem.img !== noImageUrl && sharedItem.images.length === 0}
 					<div>
 						<label class="block pb-0.5 text-sm font-medium text-surface-300">Image</label>
-						<div class="relative inline-block">
+						<div class="relative">
 							<img
 								src={sharedItem.img}
 								alt="Fetched preview"
-								class="h-32 w-32 rounded-lg object-cover"
+								class="w-full max-h-64 rounded-lg object-contain"
 							/>
 							<button
 								type="button"
 								onclick={() => { haptic('light'); sharedItem.img = noImageUrl; }}
-								class="absolute -top-1.5 -right-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-transform hover:scale-110"
+								class="absolute top-2 right-2 flex size-6 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-transform hover:scale-110"
 							>
-								<X class="size-3" />
+								<X class="size-3.5" />
 							</button>
 							<p class="text-xs text-surface-400 mt-1">Fetched from web</p>
 						</div>
 					</div>
 				{:else}
-					{@render Fileupload()}
+					{#if !descFocused}
+						<div transition:slide={{ duration: 250, easing: quintOut }}>
+							{@render Fileupload()}
+						</div>
+					{/if}
 				{/if}
 
 				<div>

@@ -37,7 +37,8 @@ export const home = $state({
 	spaceviewLayout: false,
 	pageTitle: 'Home',
 	selectMode: false,
-	selectedTitles: [] as string[]
+	selectedTitles: [] as string[],
+	reorderMode: false
 });
 
 export const spaceSelect = $state<{
@@ -76,10 +77,11 @@ export const sheetState = $state<{
 
 export const onboardingView = $state({ active: false });
 
-export const spaceview: { pageTitle: string; clr: string; viewItems: any } = $state({
+export const spaceview: { pageTitle: string; clr: string; viewItems: any; reorderMode: boolean } = $state({
 	pageTitle: '',
 	clr: 'purple',
-	viewItems: []
+	viewItems: [],
+	reorderMode: false
 });
 
 export const sharedItem: {

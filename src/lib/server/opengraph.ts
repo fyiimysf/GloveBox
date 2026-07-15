@@ -104,6 +104,57 @@ function applyJsonLdFallback(html: string, ogData: Partial<OpenGraphData>): void
 	}
 }
 
+function unescapeJsonString(str: string): string {
+	return str
+		.replace(/\\u0026/g, '&')
+		.replace(/\\u003C/g, '<')
+		.replace(/\\u003E/g, '>')
+		.replace(/\\\//g, '/')
+		.replace(/\\n/g, '\n')
+		.replace(/\\t/g, '\t')
+		.replace(/\\"/g, '"')
+		.replace(/\\\\/g, '\\');
+}
+
+function extractInstagramImage(html: string): string | null {
+	// Try image_versions2 candidates first — these have resolution info
+	const candidatesMatch = html.match(/"image_versions2"\s*:\s*\{[^}]*"candidates"\s*:\s*\[([\s\S]*?)\]/);
+	if (candidatesMatch) {
+		try {
+			type Candidate = { url: string; width: number; height: number };
+			const entries = [...candidatesMatch[1].matchAll(/\{[^}]*?"url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"[^}]*?\}/g)];
+			const candidates: Candidate[] = entries.map((m) => {
+				const block = m[0];
+				const url = unescapeJsonString(m[1]);
+				const w = block.match(/"width"\s*:\s*(\d+)/);
+				const h = block.match(/"height"\s*:\s*(\d+)/);
+				return { url, width: w ? parseInt(w[1]) : 0, height: h ? parseInt(h[1]) : 0 };
+			});
+			if (candidates.length > 0) {
+				candidates.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+				const best = candidates[0];
+				if (best.url.startsWith('http')) return best.url;
+			}
+		} catch { /* ignore */ }
+	}
+
+	// Fallback: display_url
+	const displayUrlMatch = html.match(/"display_url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+	if (displayUrlMatch) {
+		const url = unescapeJsonString(displayUrlMatch[1]);
+		if (url.startsWith('http')) return url;
+	}
+
+	// Fallback: og_image_url
+	const ogImageMatch = html.match(/"og_image_url"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/);
+	if (ogImageMatch) {
+		const url = unescapeJsonString(ogImageMatch[1]);
+		if (url.startsWith('http')) return url;
+	}
+
+	return null;
+}
+
 export async function fetchOpenGraphData(url: string): Promise<OpenGraphData> {
 	const shortcode = extractShortcode(url);
 	const userAgents = shortcode ? INSTAGRAM_UAS : [DEFAULT_UA];
@@ -135,6 +186,14 @@ export async function fetchOpenGraphData(url: string): Promise<OpenGraphData> {
 	}
 
 	if (!root) throw new Error('Failed to fetch URL');
+
+	// For Instagram: try to extract the full-resolution image from embedded data
+	if (shortcode && html) {
+		const igImage = extractInstagramImage(html);
+		if (igImage && igImage.startsWith('http')) {
+			ogData.image = igImage;
+		}
+	}
 
 	applyMetaFallbacks(root, ogData);
 

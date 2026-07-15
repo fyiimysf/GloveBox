@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { fly, scale, slide, blur, fade } from 'svelte/transition';
 	import Cards from '$lib/components/Cards.svelte';
-	import { home, localSpaces, spaceview, confirmState, truncate, setUndoRemove, togglePinSelectedItems, haptic } from '$lib/shared.svelte';
-	import { ArrowLeft, CircleDotDashed, CircleSlash, Pin, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
+	import { home, localSpaces, spaceview, confirmState, truncate, setUndoRemove, togglePinSelectedItems, scrollableVignette, haptic } from '$lib/shared.svelte';
+	import { ArrowLeft, CircleDotDashed, CircleSlash, GripVertical, Pin, Trash2, CheckSquare, Square, X } from 'lucide-svelte';
 	import toast from 'svelte-french-toast';
+	import { dndzone } from 'svelte-dnd-action';
+	import type { DndEvent } from 'svelte-dnd-action';
 
 	try {
 		if (typeof sessionStorage !== 'undefined' && spaceview.viewItems.length < 1) {
@@ -23,6 +25,61 @@
 
 	let reversedItems = $derived([...spaceview.viewItems].reverse());
 
+	const flipDurationMsGrid = 150;
+	let dndItems: any[] = $state([]);
+
+	function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
+		dndItems = e.detail.items;
+	}
+
+	function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
+		dndItems = e.detail.items;
+		const reversed = [...dndItems].reverse();
+		spaceview.viewItems = reversed;
+		const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
+		if (space) {
+			space.items = reversed;
+			localSpaces.current = [...localSpaces.current];
+		}
+		haptic('medium');
+	}
+
+	let reorderContainer: HTMLDivElement;
+	let autoScrollRaf: number | null = null;
+	let pointerY = 0;
+
+	function autoScrollLoop() {
+		if (!reorderContainer) return;
+		const rect = reorderContainer.getBoundingClientRect();
+		const edgeSize = 60;
+		const maxSpeed = 8;
+		const distFromTop = pointerY - rect.top;
+		const distFromBottom = rect.bottom - pointerY;
+		let scrollAmount = 0;
+		if (distFromTop >= 0 && distFromTop < edgeSize) {
+			scrollAmount = -maxSpeed * (1 - distFromTop / edgeSize);
+		} else if (distFromBottom >= 0 && distFromBottom < edgeSize) {
+			scrollAmount = maxSpeed * (1 - distFromBottom / edgeSize);
+		}
+		if (scrollAmount !== 0) {
+			reorderContainer.scrollTop += scrollAmount;
+		}
+		autoScrollRaf = requestAnimationFrame(autoScrollLoop);
+	}
+
+	$effect(() => {
+		if (spaceview.reorderMode) {
+			dndItems = reversedItems.map((item: any) => ({ ...item, id: item.title }));
+			const onMove = (e: PointerEvent) => { pointerY = e.clientY; };
+			document.addEventListener('pointermove', onMove);
+			autoScrollRaf = requestAnimationFrame(autoScrollLoop);
+			return () => {
+				document.removeEventListener('pointermove', onMove);
+				if (autoScrollRaf) { cancelAnimationFrame(autoScrollRaf); autoScrollRaf = null; }
+			};
+		}
+	});
+
 	function addSelectedToSpace(spc: any) {
 		try {
 			let added = 0;
@@ -41,6 +98,7 @@
 		}
 		home.selectedTitles = [];
 		home.selectMode = false;
+		spaceview.reorderMode = false;
 		spaceMenu = false;
 	}
 
@@ -58,34 +116,55 @@
 <div in:blur|global class="transform-gpu relative z-1 pb-16" onclick={(e) => {
 	if (home.selectMode && !(e.target as HTMLElement).closest('.card')) {
 		home.selectMode = false;
+		spaceview.reorderMode = false;
 		home.selectedTitles = [];
 	}
 }}>
-	<div in:fly|global class="transform-gpu grid {!home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
-		{#each reversedItems as itemCard (itemCard.title)}
-			<Cards
-				h1={itemCard.title}
-				p={itemCard.text}
-				img={itemCard.img}
-				fL={itemCard.link}
-				fR={itemCard.date}
-				full={home.spaceviewLayout}
-				item={itemCard}
-				selectMode={home.selectMode}
-				selected={home.selectedTitles.includes(itemCard.title)}
-				pinned={itemCard.pinnedInSpace}
-				spaceName={spaceview.pageTitle}
-				onselect={(checked) => {
-					if (checked) {
-						home.selectedTitles = [...home.selectedTitles, itemCard.title];
-					} else {
-						home.selectedTitles = home.selectedTitles.filter((t: string) => t !== itemCard.title);
-						if (home.selectedTitles.length === 0) home.selectMode = false;
-					}
-				}}
-			/>
-		{/each}
-	</div>
+	{#if spaceview.reorderMode}
+		<div in:fade={{ duration: 200 }} bind:this={reorderContainer}
+			use:dndzone={{ items: dndItems, flipDurationMs: flipDurationMsGrid, type: 'spaceview', dropTargetStyle: {}, morphDisabled: true }}
+			onconsider={handleDndConsider}
+			onfinalize={handleDndFinalize}
+			use:scrollableVignette={'vertical'}
+			class="max-h-[calc(88dvh-8rem)] overflow-y-auto overscroll-y-contain grid grid-cols-2 gap-3 pr-1 p-1 touch-pan-y"
+		>
+			{#each dndItems as item, i (item.id)}
+				<div class="cursor-grab active:cursor-grabbing touch-none rounded-xl bg-primary-900/50 border border-surface-200-800/50 px-3 py-2.5">
+					<div class="flex items-center gap-2">
+						<GripVertical class="size-4 shrink-0 text-white/50" />
+						<span class="text-[10px] font-bold text-white/30 w-4 text-right">{i + 1}</span>
+						<span class="truncate text-sm font-bold">{item.title}</span>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<div in:fly|global class="transform-gpu grid {home.spaceviewLayout ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
+			{#each reversedItems as itemCard (itemCard.title)}
+				<Cards
+					h1={itemCard.title}
+					p={itemCard.text}
+					img={itemCard.img}
+					fL={itemCard.link}
+					fR={itemCard.date}
+					full={!home.spaceviewLayout}
+					item={itemCard}
+					selectMode={home.selectMode}
+					selected={home.selectedTitles.includes(itemCard.title)}
+					pinned={itemCard.pinnedInSpace}
+					spaceName={spaceview.pageTitle}
+					onselect={(checked) => {
+						if (checked) {
+							home.selectedTitles = [...home.selectedTitles, itemCard.title];
+						} else {
+							home.selectedTitles = home.selectedTitles.filter((t: string) => t !== itemCard.title);
+							if (home.selectedTitles.length === 0) { home.selectMode = false; spaceview.reorderMode = false; }
+						}
+					}}
+				/>
+			{/each}
+		</div>
+	{/if}
 </div>
 
 {#if spaceview.viewItems.length < 1}
@@ -99,10 +178,24 @@
 {/if}
 
 {#if home.selectMode}
-	<div
-		in:fly={{ y: 40, duration: 200 }}
-		class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 overflow-x-auto rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10"
-	>
+	<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
+		{#if home.selectedTitles.length === 0}
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-all duration-400 {spaceview.reorderMode ? 'text-surface-300 bg-error-900/30 px-[10vw]' : 'text-white/50 hover:bg-black/90 hover:text-white'}"
+				onclick={() => { haptic('light'); spaceview.reorderMode = !spaceview.reorderMode; }}
+			>
+				<GripVertical class="size-5 rotate-90 {spaceview.reorderMode ? 'hidden' : ''}" />
+				<span class="px-1.5 pt-0.5 text-xs {spaceview.reorderMode ? 'text-error-400' : 'text-surface-400'}">{!spaceview.reorderMode ? "Reorder" : "Cancel"}</span>
+			</button>
+		{/if}
+	</div>
+
+	{#if home.selectedTitles.length > 0}
+		<div
+			in:fly={{ y: 40, duration: 200 }}
+			class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 overflow-x-auto rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10"
+		>
 		<button
 			class="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
 			onclick={toggleSelectAll}
@@ -129,6 +222,12 @@
 					onclick={() => { haptic('light'); togglePinSelectedItems('space'); }}
 				>
 					<Pin class="size-4" />
+				</button>
+				<button
+					class="flex items-center justify-center rounded-xl p-2 transition-colors duration-200 {spaceview.reorderMode ? 'text-primary-400 bg-primary-500/20' : 'text-white/50 hover:bg-white/10 hover:text-white'}"
+					onclick={() => { haptic('light'); spaceview.reorderMode = !spaceview.reorderMode; }}
+				>
+					<GripVertical class="size-4 rotate-90" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
@@ -159,12 +258,13 @@
 								console.error('Failed to remove items:', err);
 								toast.error('Failed to remove items', { duration: 2000 });
 							}
-							home.selectedTitles = [];
-							home.selectMode = false;
-						};
-					}}
-				>
-					<Trash2 class="size-4" />
+						home.selectedTitles = [];
+						home.selectMode = false;
+						spaceview.reorderMode = false;
+					};
+				}}
+			>
+				<Trash2 class="size-4" />
 				</button>
 				<button
 					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
@@ -172,13 +272,15 @@
 						haptic('light');
 						home.selectedTitles = [];
 						home.selectMode = false;
+						spaceview.reorderMode = false;
 					}}
 				>
 					<X class="size-4" />
 				</button>
 			</span>
 		{/if}
-	</div>
+		</div>
+	{/if}
 
 	{#if spaceMenu}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->

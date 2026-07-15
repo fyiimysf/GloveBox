@@ -28,12 +28,57 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pin, X } from 'lucide-svel
 				const spaceItem = space?.items.find((i: any) => i.title === cardPage.title);
 				if (spaceItem) cardPage.pinnedInSpace = spaceItem.pinnedInSpace;
 			}
+			requestAnimationFrame(checkTitleOverflow);
 		} catch (err) {
 			console.error('Failed to restore card page:', err);
 		}
 	});
 
 	const imgError = (e: any) => (e.target.src = NoImageUrl);
+
+	let titleOverflows = $state(false);
+	let titleEl: HTMLElement | undefined = $state();
+	let titleOffset = $state(0);
+	let marqueeRunning = $state(false);
+
+	function checkTitleOverflow() {
+		if (titleEl) {
+			titleOverflows = titleEl.scrollWidth > titleEl.clientWidth;
+			titleOffset = titleEl.scrollWidth - titleEl.clientWidth;
+		}
+	}
+
+	function marquee(node: HTMLElement) {
+		let anim: Animation | undefined;
+
+		function start() {
+			if (titleOffset <= 0) return;
+			anim = node.animate(
+				[
+					{ transform: 'translateX(0)' },
+					{ transform: `translateX(-${titleOffset}px)` }
+				],
+				{ duration: Math.max(2000, titleOffset * 15), iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' }
+			);
+			marqueeRunning = true;
+		}
+
+		function stop() {
+			if (anim) { anim.cancel(); anim = undefined; }
+			marqueeRunning = false;
+			node.style.transform = '';
+		}
+
+		if (titleOverflows) start();
+
+		return {
+			update(overflow: boolean) {
+				stop();
+				if (overflow) start();
+			},
+			destroy() { stop(); }
+		};
+	}
 
 	let photoViewer = $state(false);
 	let viewerIndex = $state(0);
@@ -149,8 +194,14 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pin, X } from 'lucide-svel
 			</div>
 		{/if}
 		<div class="p-2">
-			<div class="mb-2 flex items-center justify-between">
-				<h2 use:scrollableVignette={'horizontal'} class="text-xl font-bold break-all max-w-[70vw] truncate snap-x flex gap-1 overflow-x-auto pb-1">{cardPage.title}</h2>
+			<div class="mb-2 flex items-center justify-between gap-2">
+				<div class="overflow-hidden min-w-0 max-w-[68vw]">
+					<h2
+						bind:this={titleEl}
+						use:marquee={titleOverflows}
+						class="text-xl font-bold {titleOverflows ? 'whitespace-nowrap' : 'truncate'}"
+					>{cardPage.title}</h2>
+				</div>
 				<div class="relative shrink-0">
 					<button
 						onclick={() => { if (cardPage.space) pinMenuOpen = !pinMenuOpen; else toggleCardPin('home'); }}
@@ -308,3 +359,5 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pin, X } from 'lucide-svel
 		Go Back
 	</span>
 </button>
+
+
