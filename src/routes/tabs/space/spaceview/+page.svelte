@@ -182,103 +182,100 @@
 		{#if home.selectedTitles.length === 0}
 			<button
 				in:fly={{ y: 40, duration: 200 }}
-				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-all duration-400 {spaceview.reorderMode ? 'text-surface-300 bg-error-900/30 px-[10vw]' : 'text-white/50 hover:bg-black/90 hover:text-white'}"
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-all duration-400 {spaceview.reorderMode ? 'text-surface-300 bg-error-950/90 px-[15vw] border-0' : 'text-surface-500 hover:bg-black/90 hover:text-white'}"
 				onclick={() => { haptic('light'); spaceview.reorderMode = !spaceview.reorderMode; }}
 			>
 				<GripVertical class="size-5 rotate-90 {spaceview.reorderMode ? 'hidden' : ''}" />
-				<span class="px-1.5 pt-0.5 text-xs {spaceview.reorderMode ? 'text-error-400' : 'text-surface-400'}">{!spaceview.reorderMode ? "Reorder" : "Cancel"}</span>
+				<span class="px-1.5 pt-0.5 text-xs {spaceview.reorderMode ? 'text-error-200' : 'text-surface-400'}">{!spaceview.reorderMode ? "Reorder" : "Cancel"}</span>
 			</button>
 		{/if}
 	</div>
 
 	{#if home.selectedTitles.length > 0}
-		<div
-			in:fly={{ y: 40, duration: 200 }}
-			class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 overflow-x-auto rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10"
-		>
-		<button
-			class="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
-			onclick={toggleSelectAll}
-		>
-			{#if reversedItems.every((item: any) => home.selectedTitles.includes(item.title))}
-				<CheckSquare class="size-4" />
-				All
-			{:else}
-				<Square class="size-4" />
-				All
-			{/if}
-		</button>
-		<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/80">{home.selectedTitles.length}</span>
-		{#if home.selectedTitles.length > 0}
-			<span class="ml-auto flex items-center gap-1">
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-yellow-300/80 transition-colors duration-200 hover:bg-white/10 hover:text-yellow-300"
-					onclick={() => { spaceMenu = true; }}
-				>
-					<CircleDotDashed class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
-					onclick={() => { haptic('light'); togglePinSelectedItems('space'); }}
-				>
-					<Pin class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 transition-colors duration-200 {spaceview.reorderMode ? 'text-primary-400 bg-primary-500/20' : 'text-white/50 hover:bg-white/10 hover:text-white'}"
-					onclick={() => { haptic('light'); spaceview.reorderMode = !spaceview.reorderMode; }}
-				>
-					<GripVertical class="size-4 rotate-90" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
-					onclick={() => {
-						haptic('medium');
-						confirmState.open = true;
-						confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
-						confirmState.message = 'Remove from this space';
-						confirmState.confirmText = 'Delete';
-						confirmState.onConfirm = () => {
-							try {
-								let titles = home.selectedTitles;
-								const deletedItems = [...spaceview.viewItems].filter((i: any) => titles.includes(i.title));
-								localSpaces.current.forEach((spc: any) => {
-									if (spc.name === spaceview.pageTitle) {
-										spc.items = spc.items.filter(
-											(item: any) => !titles.includes(item.title)
-										);
-									}
-								});
-								spaceview.viewItems = spaceview.viewItems.filter(
-									(item: any) => !titles.includes(item.title)
-								);
-								const msg = titles.length + ' items removed';
-								setUndoRemove(msg, deletedItems, spaceview.pageTitle);
-								toast.success(msg, { duration: 2000 });
-							} catch (err) {
-								console.error('Failed to remove items:', err);
-								toast.error('Failed to remove items', { duration: 2000 });
-							}
+		<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-row items-center gap-2">
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+				onclick={toggleSelectAll}
+			>
+				{#if reversedItems.every((item: any) => home.selectedTitles.includes(item.title))}
+					<CheckSquare class="size-5 text-primary-400" />
+				{:else}
+					<Square class="size-5 text-primary-400" />
+				{/if}
+				<span class="px-1.5 pt-0.5 text-xs text-primary-300">{home.selectedTitles.length}</span>
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+				onclick={() => { spaceMenu = true; }}
+			>
+				<CircleDotDashed class="size-5 text-yellow-300/80" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+				onclick={() => { haptic('light'); togglePinSelectedItems('space'); }}
+			>
+				<Pin class="size-5 text-primary-400/80" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 {spaceview.reorderMode ? 'text-primary-400 bg-primary-500/20' : 'text-white/50 hover:bg-black/90 hover:text-white'}"
+				onclick={() => { haptic('light'); spaceview.reorderMode = !spaceview.reorderMode; }}
+			>
+				<GripVertical class="size-5 rotate-90" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center justify-center rounded-2xl bg-red-500/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-red-400"
+				onclick={() => {
+					haptic('medium');
+					confirmState.open = true;
+					confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
+					confirmState.message = 'Remove from this space';
+					confirmState.confirmText = 'Delete';
+					confirmState.onConfirm = () => {
+						try {
+							let titles = home.selectedTitles;
+							const deletedItems = [...spaceview.viewItems].filter((i: any) => titles.includes(i.title));
+							localSpaces.current.forEach((spc: any) => {
+								if (spc.name === spaceview.pageTitle) {
+									spc.items = spc.items.filter(
+										(item: any) => !titles.includes(item.title)
+									);
+								}
+							});
+							spaceview.viewItems = spaceview.viewItems.filter(
+								(item: any) => !titles.includes(item.title)
+							);
+							const msg = titles.length + ' items removed';
+							setUndoRemove(msg, deletedItems, spaceview.pageTitle);
+							toast.success(msg, { duration: 2000 });
+						} catch (err) {
+							console.error('Failed to remove items:', err);
+							toast.error('Failed to remove items', { duration: 2000 });
+						}
 						home.selectedTitles = [];
 						home.selectMode = false;
 						spaceview.reorderMode = false;
 					};
 				}}
 			>
-				<Trash2 class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
-					onclick={() => {
-						haptic('light');
-						home.selectedTitles = [];
-						home.selectMode = false;
-						spaceview.reorderMode = false;
-					}}
-				>
-					<X class="size-4" />
-				</button>
-			</span>
-		{/if}
+				<Trash2 class="size-5 text-white" />
+			</button>
+			<button
+				in:fly={{ y: 40, duration: 200 }}
+				class="flex items-center gap-1.5 rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 text-xs font-bold text-white/60 transition-colors duration-200 hover:bg-black/90 hover:text-white"
+				onclick={() => {
+					haptic('light');
+					home.selectedTitles = [];
+					home.selectMode = false;
+					spaceview.reorderMode = false;
+				}}
+			>
+				<p class="pt-1">Cancel</p>
+			</button>
 		</div>
 	{/if}
 

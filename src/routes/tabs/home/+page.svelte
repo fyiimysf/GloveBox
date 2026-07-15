@@ -208,7 +208,7 @@
 				{/each}
 			</div>
 		{:else}
-			<div in:fade={{ duration: 200 }} use:scrollableVignette={'vertical'} class="{recentItems.length === 0 ? 'xs:max-h-[calc(86dvh-12rem)] max-h-[calc(82dvh-12rem)]' : 'xs:max-h-[calc(60dvh-10rem)] max-h-[20vh]'} overflow-y-auto grid grid-cols-2 gap-3 pr-1 p-1">
+			<div in:fade={{ duration: 200 }} use:scrollableVignette={'vertical'} class="{recentItems.length === 0 ? 'xs:max-h-[calc(86dvh-6rem)] max-h-[calc(80dvh-6rem)]' : 'xs:max-h-[calc(60dvh-10rem)] max-h-[20vh]'} overflow-y-auto grid grid-cols-2 gap-3 pr-1 p-1">
 				{#each pinnedItems as item, i (item.title)}
 					<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
 						{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}

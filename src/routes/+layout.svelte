@@ -854,42 +854,42 @@ import {
 
 {#snippet Appbar(title: string, children: any)}
 	<div transition:slide|global class="transform-gpu">
-		<AppBar classes="bg-surface-950/60 rounded-b-[35px] gpu-layer backdrop-blur-xl">
-			{#snippet headline()}
-				<div class="dark:bg-primary-500/40 rounded-full py-2">
+		<AppBar classes="bg-surface-950/60 rounded-b-[35px] gpu-layer backdrop-blur-xl text-primary-50">
+			<!-- {#snippet headline()} -->
+				<div class="  rounded-full absolute top-8 left-1/2 -translate-1/2 -z-1">
 					{#if page.route.id === '/settings'}
 					<center>
-						<h1 in:fade class="h1 font-bold">Settings</h1>
+						<h1 in:fade class="h2 font-bold">Settings</h1>
 					</center>
 					{:else if page.route.id === '/tabs/home/saved'}
 					<center>
-						<h1 in:fade class="h1 font-bold">Saved</h1>
+						<h1 in:fade class="h2 font-bold">Saved</h1>
 					</center>
 					{:else if page.route.id === '/tabs/home'}
 					<center>
-						<h1 in:fade class="h1 font-bold">Home</h1>
+						<h1 in:fade class="h2 font-bold">Home</h1>
 					</center>
 					{:else if page.route.id === '/tabs/space'}
 					<center>
-						<h1 in:fade class="h1 font-bold">Space</h1>
+						<h1 in:fade class="h2 font-bold">Space</h1>
 					</center>
 					{:else if page.route.id === '/info'}
 					<center>
-						<h1 in:fade class="h1 font-bold">Glove Box</h1>
+						<h1 in:fade class="h2 font-bold">Glove Box</h1>
 					</center>
 			{:else if page.route.id === '/card'}
 				<center>
-					<h1 in:fade class="h1 w-70 truncate font-bold">{cardPage.link || cardPage.title}</h1>
+					<h1 in:fade class="h2 w-70 truncate font-bold">{cardPage.link || cardPage.title}</h1>
 				</center>
 				{:else if page.route.id === '/tabs/space/spaceview'}
 				<center>
-					<h1 in:fade class="h1 w-70 truncate font-bold text-{spaceview.clr}-400">
+					<h1 in:fade class="h2 w-70 truncate font-bold text-{spaceview.clr}-200">
 						{spaceview.pageTitle}
 					</h1>
 				</center>
 				{/if}
 			</div>
-			{/snippet}
+			<!-- {/snippet} -->
 
 			{#snippet lead()}
 				{#if page.route.id === '/settings' || page.route.id === '/tabs/home/saved' || page.error || page.route.id === '/info' || page.route.id === '/tabs/space/spaceview'}
@@ -1006,14 +1006,14 @@ import {
 					{/if}
 			{:else if page.route.id === '/tabs/space/spaceview'}
 				<SquareStack
-					class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]' : ''}"
+					class="size-7 {home.selectMode ? 'text-primary-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.6)] z-10' : ''}"
 					onclick={() => {
 						haptic('light');
 						home.selectMode = !home.selectMode;
 						if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; }
 					}}
 					/>
-				<Trash
+				<!-- <Trash
 					onclick={() => {
 						haptic('medium');
 						confirmState.open = true;
@@ -1039,7 +1039,7 @@ import {
 							};
 						}}
 						class="size-7"
-					/>
+					/> -->
 				{#if !home.spaceviewLayout}
 					<LayoutGrid
 						onclick={() => {

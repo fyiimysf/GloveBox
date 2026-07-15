@@ -78,91 +78,87 @@
 </div>
 
 {#if home.selectMode}
-	<div
-		in:fly={{ y: 40, duration: 200 }}
-		class="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 overflow-x-auto rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10"
-	>
+	<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-row items-center gap-2">
 		<button
-			class="flex items-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-bold text-primary-400 transition-colors duration-200 hover:bg-primary-500/10"
+			in:fly={{ y: 40, duration: 200 }}
+			class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
 			onclick={toggleSelectAll}
 		>
 			{#if reversedItems.every((item: any) => home.selectedTitles.includes(item.title))}
-				<CheckSquare class="size-4" />
-				All
+				<CheckSquare class="size-5 text-primary-400" />
 			{:else}
-				<Square class="size-4" />
-				All
+				<Square class="size-5 text-primary-400" />
 			{/if}
+			<span class="px-1.5 pt-0.5 text-xs text-primary-300">{home.selectedTitles.length}</span>
 		</button>
-		<span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/80">{home.selectedTitles.length}</span>
-		{#if home.selectedTitles.length > 0}
-			<span class="ml-auto flex items-center gap-1">
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-yellow-300/80 transition-colors duration-200 hover:bg-white/10 hover:text-yellow-300"
-					onclick={() => { spaceMenu = true; }}
-				>
-					<CircleDotDashed class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-primary-400/80 transition-colors duration-200 hover:bg-primary-500/10 hover:text-primary-400"
-					onclick={() => { haptic('light'); togglePinSelectedItems('home'); }}
-				>
-					<Pin class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl bg-red-500/80 p-2 text-white transition-colors duration-200 hover:bg-red-400"
-				onclick={() => {
-					haptic('medium');
-					confirmState.open = true;
-					confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
-						confirmState.message = 'This will remove them from all spaces too';
-						confirmState.confirmText = 'Delete All';
-						confirmState.onConfirm = () => {
-							try {
-								let titles = home.selectedTitles;
-								const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
-								const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-								for (const spc of localSpaces.current) {
-									const matching = spc.items.filter((i: any) => titles.includes(i.title));
-									if (matching.length > 0) {
-										spaceMappings.push({ spaceName: spc.name, items: matching });
-									}
-								}
-								let tempArr = localItems.current.filter(
-									(item: any) => !titles.includes(item.title)
-								);
-								localItems.current = tempArr;
-								localSpaces.current.forEach((spc: any) => {
-									spc.items = spc.items.filter(
-										(item: any) => !titles.includes(item.title)
-									);
-								});
-								const msg = titles.length + ' items Deleted';
-								setUndo(msg, deletedItems, spaceMappings);
-								toast.success(msg, { duration: 2000 });
-							} catch (err) {
-								console.error('Failed to delete items:', err);
-								toast.error('Failed to delete items', { duration: 2000 });
+		<button
+			in:fly={{ y: 40, duration: 200 }}
+			class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+			onclick={() => { spaceMenu = true; }}
+		>
+			<CircleDotDashed class="size-5 text-yellow-300/80" />
+		</button>
+		<button
+			in:fly={{ y: 40, duration: 200 }}
+			class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-black/90"
+			onclick={() => { haptic('light'); togglePinSelectedItems('home'); }}
+		>
+			<Pin class="size-5 text-primary-400/80" />
+		</button>
+		<button
+			in:fly={{ y: 40, duration: 200 }}
+			class="flex items-center justify-center rounded-2xl bg-red-500/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-colors duration-200 hover:bg-red-400"
+			onclick={() => {
+				haptic('medium');
+				confirmState.open = true;
+				confirmState.title = 'Delete ' + home.selectedTitles.length + ' items?';
+				confirmState.message = 'This will remove them from all spaces too';
+				confirmState.confirmText = 'Delete All';
+				confirmState.onConfirm = () => {
+					try {
+						let titles = home.selectedTitles;
+						const deletedItems = localItems.current.filter((i: any) => titles.includes(i.title));
+						const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
+						for (const spc of localSpaces.current) {
+							const matching = spc.items.filter((i: any) => titles.includes(i.title));
+							if (matching.length > 0) {
+								spaceMappings.push({ spaceName: spc.name, items: matching });
 							}
-							home.selectedTitles = [];
-							home.selectMode = false;
-						};
-					}}
-				>
-					<Trash2 class="size-4" />
-				</button>
-				<button
-					class="flex items-center justify-center rounded-xl p-2 text-white/60 transition-colors duration-200 hover:bg-white/10 hover:text-white"
-					onclick={() => {
-						haptic('light');
-						home.selectedTitles = [];
-						home.selectMode = false;
-					}}
-				>
-					<X class="size-4" />
-				</button>
-			</span>
-		{/if}
+						}
+						let tempArr = localItems.current.filter(
+							(item: any) => !titles.includes(item.title)
+						);
+						localItems.current = tempArr;
+						localSpaces.current.forEach((spc: any) => {
+							spc.items = spc.items.filter(
+								(item: any) => !titles.includes(item.title)
+							);
+						});
+						const msg = titles.length + ' items Deleted';
+						setUndo(msg, deletedItems, spaceMappings);
+						toast.success(msg, { duration: 2000 });
+					} catch (err) {
+						console.error('Failed to delete items:', err);
+						toast.error('Failed to delete items', { duration: 2000 });
+					}
+					home.selectedTitles = [];
+					home.selectMode = false;
+				};
+			}}
+		>
+			<Trash2 class="size-5 text-white" />
+		</button>
+		<button
+			in:fly={{ y: 40, duration: 200 }}
+			class="flex items-center gap-1.5 rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 text-xs font-bold text-white/60 transition-colors duration-200 hover:bg-black/90 hover:text-white"
+			onclick={() => {
+				haptic('light');
+				home.selectedTitles = [];
+				home.selectMode = false;
+			}}
+		>
+			<p class="pt-1">Cancel</p>
+		</button>
 	</div>
 
 	{#if spaceMenu}

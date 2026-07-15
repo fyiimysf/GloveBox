@@ -143,7 +143,7 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pin, X } from 'lucide-svel
 </script>
 
 	<div in:blur class="transform-gpu justify-top z-10 flex flex-col items-start overflow-x-hidden">
-	<div class="z-5 w-full pb-20">
+	<div class="z-5 w-1vh pb-20">
 		<div
 			class="relative my-2 flex w-full touch-pan-y justify-center"
 			ontouchstart={handleTouchStart}
@@ -195,7 +195,7 @@ import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pin, X } from 'lucide-svel
 		{/if}
 		<div class="p-2">
 			<div class="mb-2 flex items-center justify-between gap-2">
-				<div class="overflow-hidden min-w-0 max-w-[68vw]">
+				<div use:scrollableVignette={'horizontal'} class="overflow-hidden min-w-0 max-w-[65vw]">
 					<h2
 						bind:this={titleEl}
 						use:marquee={titleOverflows}
