@@ -178,18 +178,17 @@
 {/if}
 
 {#if home.selectMode}
-	<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
-		{#if home.selectedTitles.length === 0}
+	{#if home.selectedTitles.length === 0}
+		<div in:fly|global={{ y: 40, duration: 200 }} class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20">
 			<button
-				in:fly={{ y: 40, duration: 200 }}
 				class="flex items-center justify-center rounded-2xl bg-black/80 px-3 py-2.5 shadow-2xl backdrop-blur-xl border border-white/10 transition-all duration-400 {spaceview.reorderMode ? 'text-surface-300 bg-error-950/90 px-[15vw] border-0' : 'text-surface-500 hover:bg-black/90 hover:text-white'}"
 				onclick={() => { haptic('light'); spaceview.reorderMode = !spaceview.reorderMode; }}
 			>
 				<GripVertical class="size-5 rotate-90 {spaceview.reorderMode ? 'hidden' : ''}" />
 				<span class="px-1.5 pt-0.5 text-xs {spaceview.reorderMode ? 'text-error-200' : 'text-surface-400'}">{!spaceview.reorderMode ? "Reorder" : "Cancel"}</span>
 			</button>
-		{/if}
-	</div>
+		</div>
+	{/if}
 
 	{#if home.selectedTitles.length > 0}
 		<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 flex flex-row items-center gap-2">

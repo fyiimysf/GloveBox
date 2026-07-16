@@ -151,44 +151,43 @@
 		home.selectedTitles = [];
 	}
 }}>
-	{#if localItems.current.length > 0}
 	{#if recentItems.length > 0 && !home.reorderMode}
-		<div transition:fade={{ duration: 200 }} class="flex items-center justify-between">
-				<p class="h3 p-0 font-thin">Recent <span class="text-sm font-normal align-middle text-white/40">{localItems.current.length}</span></p>
-				<a
-					href="/tabs/home/saved"
-					onclick={() => { spaceview.clr = 'purple'; }}
-					class="text-sm font-medium text-primary-400 pr-1"
-				>Show All</a>
-			</div>
-			{#if pinnedItems.length > 0}
-				<div use:scrollableVignette={'horizontal'} class="flex gap-1 overflow-x-auto pb-2 snap-x ">
-					{#each recentItems as item, i (item.title)}
-						<div class="shrink-0 w-40 snap-start p-0.5" transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
-							{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
-						</div>
-					{/each}
-				</div>
-			{:else}
-				<div use:scrollableVignette={'vertical'} class="max-h-[calc(88dvh-10rem)] overflow-y-auto transform-gpu grid grid-cols-2 gap-3 pb-10 p-1">
-					{#each recentItems as item, i (item.title)}
-						<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
-							{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
-						</div>
-					{/each}
-				</div>
-			{/if}
-		{/if}
-
+		<div in:fade={{ duration: 200 }} class="flex items-center justify-between">
+			<p class="h3 p-0 font-thin">Recent <span class="text-sm font-normal align-middle text-white/40">{localItems.current.length}</span></p>
+			<a
+				href="/tabs/home/saved"
+				onclick={() => { spaceview.clr = 'purple'; }}
+				class="text-sm font-medium text-primary-400 pr-1"
+			>Show All</a>
+		</div>
 		{#if pinnedItems.length > 0}
-			<div class="flex items-center justify-between">
-				<p class="h3 p-0 font-thin">Pinned</p>
-				<a
-					href="/tabs/home/saved"
-					onclick={() => { spaceview.clr = 'purple'; }}
-					class="text-sm font-medium text-primary-400 pr-1"
-				>Show All</a>
+			<div use:scrollableVignette={'horizontal'} class="flex gap-1 overflow-x-auto pb-2 snap-x ">
+				{#each recentItems as item, i (item.title)}
+					<div class="shrink-0 w-40 snap-start p-0.5" transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
+						{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
+					</div>
+				{/each}
 			</div>
+		{:else}
+			<div use:scrollableVignette={'vertical'} class="max-h-[calc(88dvh-10rem)] overflow-y-auto transform-gpu grid grid-cols-2 gap-3 pb-10 p-1">
+				{#each recentItems as item, i (item.title)}
+					<div transition:fly={{ y: 20, delay: i * 30, duration: 200 }}>
+						{@render Card(item.img, item.title, item.text, item.link, new Date().toLocaleDateString(), false, item)}
+					</div>
+				{/each}
+			</div>
+		{/if}
+	{/if}
+
+	{#if pinnedItems.length > 0}
+		<div in:fade={{ duration: 200 }} class="flex items-center justify-between">
+			<p class="h3 p-0 font-thin">Pinned</p>
+			<a
+				href="/tabs/home/saved"
+				onclick={() => { spaceview.clr = 'purple'; }}
+				class="text-sm font-medium text-primary-400 pr-1"
+			>Show All</a>
+		</div>
 		{#if home.reorderMode}
 			<div in:fade={{ duration: 200 }} bind:this={reorderContainer}
 				use:dndzone={{ items: dndItems, flipDurationMs: flipDurationMsGrid, type: 'pinned', dropTargetStyle: {}, morphDisabled: true }}
@@ -215,7 +214,6 @@
 					</div>
 				{/each}
 			</div>
-		{/if}
 		{/if}
 	{/if}
 </div>

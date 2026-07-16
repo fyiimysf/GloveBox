@@ -34,8 +34,6 @@
 		User,
 		CircleUser,
 		SquareStack,
-		CircleOff,
-		CircleDotDashed,
 		Check,
 		Clipboard,
 		ChevronUpCircle,
@@ -43,9 +41,7 @@
 		Trash2,
 		ChevronLeft,
 		Pin,
-		PinOff,
-		Share2,
-		Copy
+		PinOff
 	} from 'lucide-svelte';
 	import { blur, fade, fly, slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -222,6 +218,7 @@ import {
 	import { browser } from '$app/environment';
 	import ColorGroup from '$lib/components/ColorGroup.svelte';
 	import Grainient from '$lib/components/Grainient.svelte';
+	import BottomSheet from '$lib/components/BottomSheet.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -300,132 +297,6 @@ import {
 		if (dy > 50 && target.scrollTop === 0) closeExpanded();
 	}
 
-	function removeFromSheetSpace(spaceObj: any) {
-		try {
-			const deletedItem = sheetState.data;
-			spaceObj.items = spaceObj.items.filter((item: any) => item.title !== sheetState.data.title);
-			spaceview.viewItems = spaceview.viewItems.filter((item: any) => item.title !== sheetState.data.title);
-			setUndoRemove(truncate(sheetState.data.title) + ' removed', [deletedItem], spaceObj.name);
-			toast.success(truncate(sheetState.data.title) + ' removed', { duration: 2000 });
-		} catch (err) {
-			console.error('Failed to remove from space:', err);
-			toast.error('Failed to remove item', { duration: 2000 });
-		}
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-	}
-
-	function confirmRemoveFromSheetSpace(spaceObj: any) {
-		confirmState.open = true;
-		confirmState.title = 'Remove from ' + spaceObj.name + '?';
-		confirmState.message = truncate(sheetState.data.title, 80);
-		confirmState.confirmText = 'Remove';
-		confirmState.onConfirm = () => removeFromSheetSpace(spaceObj);
-	}
-
-	function deleteSheetItem() {
-		haptic('medium');
-		try {
-			const deletedItem = localItems.current.find((i: any) => i.title === sheetState.data.title);
-			const spaceMappings: Array<{ spaceName: string; items: any[] }> = [];
-			for (const spc of localSpaces.current) {
-				if (spc.items.some((i: any) => i.title === sheetState.data.title)) {
-					spaceMappings.push({ spaceName: spc.name, items: [deletedItem] });
-				}
-			}
-			localItems.current = localItems.current.filter((item: any) => item.title !== sheetState.data.title);
-			localSpaces.current.forEach((spc: any) => {
-				spc.items = spc.items.filter((item: any) => item.title !== sheetState.data.title);
-			});
-			setUndo(truncate(sheetState.data.title) + ' Deleted', [deletedItem], spaceMappings);
-			toast(truncate(sheetState.data.title) + ' Deleted', { icon: '🗑️', duration: 2000 });
-		} catch (err) {
-			console.error('Failed to delete item:', err);
-			toast.error('Failed to delete item', { duration: 2000 });
-		}
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-		if (page.route.id === '/card') history.back();
-	}
-
-	function confirmDeleteSheetItem() {
-		confirmState.open = true;
-		confirmState.title = 'Delete Item?';
-		confirmState.message = truncate(sheetState.data.title,80);
-		confirmState.confirmText = 'Delete';
-		confirmState.onConfirm = deleteSheetItem;
-	}
-
-	function addSheetItemToSpace(spaceObj: any) {
-		try {
-			const exists = spaceObj.items.some((i: any) => i.title === sheetState.data.title);
-			if (exists) {
-				toast.error('Already in ' + spaceObj.name, { duration: 1500 });
-			} else {
-				spaceObj.items.push(sheetState.data);
-				toast.success('Added to ' + spaceObj.name, { duration: 1500 });
-			}
-		} catch (err) {
-			console.error('Failed to add to space:', err);
-			toast.error('Failed to add to space', { duration: 2000 });
-		}
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-	}
-
-	function toggleSheetPin() {
-		haptic('light');
-		if (!sheetState.data) return;
-		try {
-			sheetState.data.pinned = !sheetState.data.pinned;
-			const li = localItems.current.find((i: any) => i.title === sheetState.data.title);
-			if (li) li.pinned = sheetState.data.pinned;
-			localSpaces.current.forEach((spc: any) => {
-				const si = spc.items.find((i: any) => i.title === sheetState.data.title);
-				if (si) si.pinned = sheetState.data.pinned;
-			});
-			toast.success(sheetState.data.pinned ? 'Pinned to top' : 'Unpinned', { duration: 1500 });
-		} catch (err) {
-			console.error('Failed to toggle pin:', err);
-			toast.error('Failed to update pin', { duration: 2000 });
-		}
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-	}
-
-	function toggleSheetPinInSpace() {
-		haptic('light');
-		if (!sheetState.data) return;
-		const space = localSpaces.current.find((s: any) => s.name === spaceview.pageTitle);
-		if (!space) return;
-		const si = space.items.find((i: any) => i.title === sheetState.data.title);
-		if (si) si.pinnedInSpace = !si.pinnedInSpace;
-		const pinned = si?.pinnedInSpace ?? false;
-		sheetState.data.pinnedInSpace = pinned;
-		toast.success(pinned ? 'Pinned to ' + spaceview.pageTitle : 'Unpinned from ' + spaceview.pageTitle, { duration: 1500 });
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-	}
-
-	function shareItem(url: string, title: string) {
-		if (navigator.share) {
-			navigator.share({ title, url }).catch(() => {});
-		} else {
-			toast.error('Sharing is not supported on this browser', { duration: 2000 });
-		}
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-	}
-
-	function copyItemUrl(url: string) {
-		navigator.clipboard.writeText(url).then(() => {
-			toast.success('URL copied to clipboard', { duration: 2000 });
-		}).catch(() => {
-			toast.error('Failed to copy URL', { duration: 2000 });
-		});
-		sheetState.open = false;
-		sheetState.spacePicker = false;
-	}
 </script>
 
 <div class="relative flex justify-center w-screen">
@@ -686,169 +557,7 @@ import {
 			{@render ConfirmDialogue()}
 		</div>
 	{/if}
-	{#if sheetState.open && sheetState.data}
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			transition:fade={{ duration: 150 }}
-			onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
-			class="fixed inset-0 z-200 flex items-end justify-center bg-black/60 backdrop-blur-sm"
-		>
-			<div
-				transition:fly={{ duration: 250, y: 200, opacity: 0 }}
-				onclick={(e) => e.stopPropagation()}
-				class="mx-auto w-full max-w-lg rounded-t-2xl border border-white/10 bg-primary-950/80 shadow-2xl backdrop-blur-xl"
-			>
-				<div class="flex justify-center pt-3 pb-1">
-					<div class="h-1.5 w-12 rounded-full bg-white/20"></div>
-				</div>
-
-				<div class="relative overflow-hidden">
-					<div
-						class="transition-all duration-200"
-						class:opacity-0={sheetState.spacePicker}
-						class:pointer-events-none={sheetState.spacePicker}
-					>
-						<div class="max-h-[65vh] overflow-y-auto">
-							<div class="px-4 pb-2">
-								<p class="truncate text-sm font-bold text-white/80">{sheetState.data.title}</p>
-							</div>
-							<div class="pb-2">
-						{#if sheetState.data.url !== ''}
-								<a
-									target="_blank"
-									href={sheetState.data.url}
-									onclick={() => { sheetState.open = false; sheetState.spacePicker = false; }}
-									class="flex items-center justify-between rounded-xl px-4 py-3.5 text-yellow-200 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
-								>
-									<span class="font-bold">Open Link</span>
-									<Link class="size-5 shrink-0" />
-								</a>
-								<hr class="mx-3 border-white/5" />
-							<button
-								onclick={() => { haptic('light'); shareItem(sheetState.data.url, sheetState.data.title) }}
-									class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-primary-100 hover:bg-green-500/10 active:scale-[0.98] transition-all duration-150"
-								>
-									<span class="font-bold">Share</span>
-									<Share2 class="size-5 shrink-0" />
-								</button>
-								<hr class="mx-3 border-white/5" />
-							<button
-								onclick={() => { haptic('light'); copyItemUrl(sheetState.data.url) }}
-									class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-secondary-200 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
-								>
-									<span class="font-bold">Copy URL</span>
-									<Copy class="size-5 shrink-0" />
-								</button>
-								<hr class="mx-3 border-white/5" />
-							{/if}
-								{#each localSpaces.current as spaceObj}
-									{#each spaceObj.items as obj}
-										{#if obj.title === sheetState.data.title}
-											<button
-												onclick={() => confirmRemoveFromSheetSpace(spaceObj)}
-												class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-{spaceObj.clr}-200 hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
-											>
-												<span class="truncate font-bold">
-													Remove from <span class="font-bold">{spaceObj.name}</span>
-												</span>
-												<CircleOff class="size-5 shrink-0" />
-											</button>
-											<hr class="mx-3 border-white/5" />
-										{/if}
-									{/each}
-								{/each}
-								{#if page.route.id === '/tabs/space/spaceview'}
-									<button
-										onclick={toggleSheetPinInSpace}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-tertiary-300 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
-									>
-										<span class="font-bold">{sheetState.data.pinnedInSpace ? 'Unpin from ' : 'Pin to '}{spaceview.pageTitle}</span>
-										{#if sheetState.data.pinnedInSpace}
-											<PinOff class="size-5 shrink-0" />
-										{:else}
-											<Pin class="size-5 shrink-0" />
-										{/if}
-									</button>
-									<hr class="mx-3 border-white/5" />
-								{/if}
-								{#if page.route.id !== '/tabs/space/spaceview' && page.route.id !== '/tabs/space'}
-							<button
-								onclick={() => { haptic('light'); sheetState.spacePicker = true }}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
-									>
-										<span class="font-bold">Add to Space</span>
-										<CircleDotDashed class="size-5 shrink-0 text-white/40" />
-									</button>
-									<hr class="mx-3 border-white/5" />
-									<button
-										onclick={toggleSheetPin}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-tertiary-300 hover:bg-blue-500/10 active:scale-[0.98] transition-all duration-150"
-									>
-										<span class="font-bold">{sheetState.data.pinned ? 'Unpin' : 'Pin to Top'}</span>
-										{#if sheetState.data.pinned}
-											<PinOff class="size-5 shrink-0" />
-										{:else}
-											<Pin class="size-5 shrink-0" />
-										{/if}
-									</button>
-									<hr class="mx-3 border-white/5" />
-							<button
-								onclick={() => { haptic('medium'); confirmDeleteSheetItem() }}
-										class="flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left text-red-300 hover:bg-red-500/10 active:scale-[0.98] transition-all duration-150"
-									>
-										<span class="font-bold">Delete</span>
-										<Trash class="size-5 shrink-0" />
-									</button>
-								{/if}
-							</div>
-						</div>
-					</div>
-
-					<div
-						class="absolute inset-0 transition-all duration-200"
-						class:opacity-0={!sheetState.spacePicker}
-						class:pointer-events-none={!sheetState.spacePicker}
-					>
-						<div class="max-h-[65vh] overflow-y-auto">
-							<div class="flex items-center gap-2 px-4 pb-2">
-							<button
-								onclick={() => { haptic('light'); sheetState.spacePicker = false }}
-									class="flex items-center gap-2 text-sm font-bold text-white/60 hover:text-white transition-colors duration-150"
-								>
-									<ChevronLeft class="size-5" />
-									<span>Add to Space</span>
-								</button>
-							</div>
-							<div class="px-1 pb-4">
-								{#each [...localSpaces.current].reverse() as item}
-							<button
-								onclick={() => { haptic('medium'); addSheetItemToSpace(item) }}
-										class="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl px-4 py-3.5 text-left hover:bg-white/5 active:scale-[0.98] transition-all duration-150"
-									>
-										<span class="flex items-center gap-3 truncate">
-											<span class="h-3 w-3 shrink-0 rounded-full bg-{item.clr}-400"></span>
-											<span class="truncate font-bold">{item.name}</span>
-										</span>
-										<CircleDotDashed class="size-5 shrink-0 text-white/50" />
-									</button>
-								{/each}
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div class="px-4 pb-4 pt-1">
-				<button
-					onclick={() => { haptic('light'); sheetState.open = false; sheetState.spacePicker = false; }}
-						class="w-full rounded-xl bg-white/10 py-3.5 text-center font-bold text-white/80 hover:bg-white/15 active:scale-[0.98] transition-all duration-150"
-					>
-						Cancel
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<BottomSheet />
 </div>
 </div>
 
@@ -930,7 +639,7 @@ import {
 						onclick={() => {
 							haptic('light');
 							home.selectMode = !home.selectMode;
-							if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; }
+						if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; spaceview.reorderMode = false; }
 						}}
 					/>
 				{:else if page.route.id === '/tabs/space'}
@@ -1010,7 +719,7 @@ import {
 					onclick={() => {
 						haptic('light');
 						home.selectMode = !home.selectMode;
-						if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; }
+						if (!home.selectMode) { home.selectedTitles = []; home.reorderMode = false; spaceview.reorderMode = false; }
 					}}
 					/>
 				<!-- <Trash

@@ -120,19 +120,19 @@
 			transition:fly={{ delay: 0, x: 100 }}
 			class="space-item transform-gpu relative
 			{spaceItem.clr === 'purple'
-				? 'bg-purple-400/10 text-purple-400 outline-purple-400'
+				? 'bg-purple-400/18 text-purple-300 outline-purple-400'
 				: spaceItem.clr === 'red'
-					? 'bg-red-400/10 text-red-400 outline-red-400'
+					? 'bg-red-400/18 text-red-300 outline-red-400'
 					: spaceItem.clr === 'green'
-						? 'bg-green-400/10 text-green-400 outline-green-400'
+						? 'bg-green-400/18 text-green-300 outline-green-400'
 						: spaceItem.clr === 'blue'
-							? 'bg-blue-400/10 text-blue-400 outline-blue-400'
+							? 'bg-blue-400/18 text-blue-300 outline-blue-400'
 							: spaceItem.clr === 'yellow'
-								? 'bg-yellow-400/10 text-yellow-400 outline-yellow-400'
+								? 'bg-yellow-400/18 text-yellow-300 outline-yellow-400'
 								: spaceItem.clr === 'orange'
-									? 'bg-orange-400/10 text-orange-400 outline-orange-400'
+									? 'bg-orange-400/18 text-orange-300 outline-orange-400'
 									: spaceItem.clr === 'pink'
-										? 'bg-pink-400/10 text-pink-400 outline-pink-400'
+										? 'bg-pink-400/18 text-pink-300 outline-pink-400'
 										: 'bg-surface-900/20 text-white outline-white'}
 
 		 z-10 rounded-2xl shadow-lg shadow-black/20 backdrop-blur overflow-hidden {spaceSelect.selectMode && spaceSelect.selectedNames.includes(spaceItem.name) ? 'ring-2 ring-primary-400 ring-offset-2 ring-offset-transparent shadow-lg shadow-primary-500/20' : ''} transition-all duration-200"
